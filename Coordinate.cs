@@ -8,11 +8,8 @@
  */
 using System;
 
-namespace ReikaKalseki.RoomEnvironmentals
+namespace ReikaKalseki.FortressCore
 {
-	/// <summary>
-	/// Description of Coordinate.
-	/// </summary>
 	public class Coordinate {
 		
 		public readonly int xCoord;

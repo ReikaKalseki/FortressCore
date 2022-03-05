@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 
 using System.Collections.Generic;
 
@@ -9,7 +10,7 @@ namespace ReikaKalseki.FortressCore
 	public static class FUtil {
 		
 		public static void log(string s) {
-			Debug.Log("FORTRESSTWEAKS: "+s);
+			Debug.Log(Assembly.GetExecutingAssembly().FullName.ToUpperInvariant().Replace("PLUGIN_", "")+": "+s);
 		}
 		
 		public static void dropItem(long x, long y, long z, string name) {

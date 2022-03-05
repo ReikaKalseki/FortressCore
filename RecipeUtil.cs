@@ -36,28 +36,31 @@ namespace ReikaKalseki.FortressCore
 			}
 		}
 		
-		public static void removeIngredient(CraftData rec, string item) {
+		public static CraftCost removeIngredient(CraftData rec, string item) {
 			for (int i = rec.Costs.Count-1; i >= 0; i--) {
 				CraftCost ing = rec.Costs[i];
 				if (ing.Key == item) {
 					rec.Costs.RemoveAt(i);
 					FUtil.log("Removed "+item+" from recipe "+recipeToString(rec, true));
+					return ing;
 				}
 			}
+			return null;
 		}
 		
-		public static void addIngredient(CraftData rec, string item, uint amt) {
+		public static CraftCost addIngredient(CraftData rec, string item, uint amt) {
 			CraftCost cost = new CraftCost();
 			cost.Amount = amt;
 			cost.Key = item;
 			rec.Costs.Add(cost);
 			FUtil.log("Added "+amt+" of "+item+" to recipe "+recipeToString(rec, true));
 			link(rec);
+			return cost;
 		}
 		
 		public static CraftData addRecipe(string id, string item, int amt = 1, string cat = "Manufacturer") {
 			CraftData rec = new CraftData();
-			rec.Category = cat;
+			rec.RecipeSet = cat;
 			rec.Key = "ReikaKalseki."+id;
 			rec.CraftedKey = item;
 			rec.CraftedAmount = amt;
@@ -65,6 +68,11 @@ namespace ReikaKalseki.FortressCore
 			link(rec);
 			FUtil.log("Added new recipe "+recipeToString(rec, true, true));
 			return rec;
+		}
+		
+		public static CraftData copyRecipe(CraftData template) {
+			string xml = XMLParser.SerializeObject(template, typeof(CraftData));
+			return (CraftData)XMLParser.DeserializeObject(xml, typeof(CraftData));
 		}
 		
 		private static void link(CraftData rec) {

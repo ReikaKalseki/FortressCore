@@ -160,11 +160,11 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		internal static string toString(List<CodeInstruction> li) {
-			return String.Join("\n", li.Select(p=>toString(p)).ToArray());
+			return "\n"+String.Join("\n", li.Select(p=>toString(p)).ToArray());
 		}
 		
 		internal static string toString(List<CodeInstruction> li, int idx) {
-			return "#"+idx+" = "+toString(li[idx]);
+			return idx < 0 || idx >= li.Count ? "ERROR: OOB "+idx+"/"+li.Count : "#"+Convert.ToString(idx, 16)+" = "+toString(li[idx]);
 		}
 		
 		internal static string toString(CodeInstruction ci) {

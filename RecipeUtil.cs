@@ -58,8 +58,17 @@ namespace ReikaKalseki.FortressCore
 			return cost;
 		}
 		
+		private static CraftData createNewRecipe() {
+			CraftData ret = new CraftData();
+			ret.Costs = new List<CraftCost>();
+			ret.ScanRequirements = new List<string>();
+			ret.ResearchRequirements = new List<string>();
+			ret.ResearchRequirementEntries = new List<ResearchDataEntry>();
+			return ret;
+		}
+		
 		public static CraftData addRecipe(string id, string item, int amt = 1, string cat = "Manufacturer") {
-			CraftData rec = new CraftData();
+			CraftData rec = createNewRecipe();
 			rec.RecipeSet = cat;
 			rec.Key = "ReikaKalseki."+id;
 			rec.CraftedKey = item;
@@ -76,7 +85,12 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		private static void link(CraftData rec) {
-			CraftData.LinkEntries(new List<CraftData>(new CraftData[]{rec}), rec.Category);
+			try {
+				CraftData.LinkEntries(new List<CraftData>(new CraftData[]{rec}), rec.Category);
+			}
+			catch (Exception e) {
+				FUtil.log("Threw error attempting to 'link' recipe: "+e.ToString());
+			}
 		}
 		
 		public static void removeResearch(CraftData rec, string key) {
@@ -102,7 +116,7 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public static string recipeToString(CraftData rec, bool fullIngredients = false, bool fullResearch = false) {
-			string ret = "'"+rec.Category+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" from ";
+			string ret = "'"+rec.RecipeSet+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" from ";
 			if (fullIngredients) {
 				List<string> li = new List<string>();
 				rec.Costs.ForEach(c => li.Add(ingredientToString(c)));

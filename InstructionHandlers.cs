@@ -95,8 +95,8 @@ namespace ReikaKalseki.FortressCore
 			return -1;
 		}
 		
-		internal static int getFirstOpcode(List<CodeInstruction> li, int index, OpCode opcode) {
-			for (int i = index; i < li.Count; i++) {
+		internal static int getFirstOpcode(List<CodeInstruction> li, int after, OpCode opcode) {
+			for (int i = after; i < li.Count; i++) {
 				CodeInstruction insn = li[i];
 				if (insn.opcode == opcode) {
 					return i;
@@ -130,7 +130,18 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		internal static bool match(CodeInstruction a, CodeInstruction b) {
-			return a.opcode == b.opcode && a.operand == b.operand;
+			return a.opcode == b.opcode && matchOperands(a.operand, b.operand);
+		}
+		
+		internal static bool matchOperands(object o1, object o2) {
+			if (o1 == o2)
+				return true;
+			if (o1 == null || o2 == null)
+				return false;
+			if (o1 is LocalBuilder && o2 is LocalBuilder) {
+				return ((LocalBuilder)o1).LocalIndex == ((LocalBuilder)o2).LocalIndex;
+			}
+			return o1.Equals(o2);
 		}
 		
 		internal static bool match(CodeInstruction insn, params object[] args) {

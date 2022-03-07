@@ -67,26 +67,56 @@ namespace ReikaKalseki.FortressCore
 			return ret;
 		}
 		
-		public static CraftData addRecipe(string id, string item, int amt = 1, string cat = "Manufacturer") {
+		public static CraftData addRecipe(string id, string item, string cat, int amt = 1, string set = "Manufacturer") {
 			CraftData rec = createNewRecipe();
-			rec.RecipeSet = cat;
+			rec.RecipeSet = set;
+			rec.Category = cat;
 			rec.Key = "ReikaKalseki."+id;
 			rec.CraftedKey = item;
 			rec.CraftedAmount = amt;
-			CraftData.mRecipesForSet[cat].Add(rec);
-			link(rec);
-			FUtil.log("Added new recipe "+recipeToString(rec, true, true));
+			addRecipe(rec);
+			return rec;
+		}
+		
+		public static CraftData addRecipe(CraftData rec) {
+			if (string.IsNullOrEmpty(rec.Key)) {
+				FUtil.log("Invalid recipe missing key and cannot be crafted: "+recipeToString(rec));
+				return rec;
+			}
+			if (string.IsNullOrEmpty(rec.Category)) {
+				FUtil.log("Invalid recipe missing category and cannot be crafted: "+recipeToString(rec));
+				return rec;
+			}
+			if (string.IsNullOrEmpty(rec.CraftedKey)) {
+				FUtil.log("Invalid recipe missing output and cannot be crafted: "+recipeToString(rec));
+				return rec;
+			}
+			if (string.IsNullOrEmpty(rec.RecipeSet)) {
+				FUtil.log("Invalid recipe missing set and cannot be crafted: "+recipeToString(rec));
+				return rec;
+			}
+			try {
+				CraftData.mRecipesForSet[rec.RecipeSet].Add(rec);
+				link(rec);
+				FUtil.log("Added new recipe "+recipeToString(rec, true, true));
+			}
+			catch (Exception e) {
+				FUtil.log("Invalid recipe cannot be crafted: "+recipeToString(rec)+" -> "+e.ToString());
+			}
 			return rec;
 		}
 		
 		public static CraftData copyRecipe(CraftData template) {
 			string xml = XMLParser.SerializeObject(template, typeof(CraftData));
-			return (CraftData)XMLParser.DeserializeObject(xml, typeof(CraftData));
+			CraftData ret = (CraftData)XMLParser.DeserializeObject(xml, typeof(CraftData));
+			ret.RecipeSet = template.RecipeSet;
+			ret.Category = template.Category;
+			return ret;
 		}
 		
 		private static void link(CraftData rec) {
 			try {
-				CraftData.LinkEntries(new List<CraftData>(new CraftData[]{rec}), rec.Category);
+				CraftData.LinkEntries(new List<CraftData>(new CraftData[]{rec}), rec.RecipeSet);
 			}
 			catch (Exception e) {
 				FUtil.log("Threw error attempting to 'link' recipe: "+e.ToString());
@@ -116,7 +146,7 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public static string recipeToString(CraftData rec, bool fullIngredients = false, bool fullResearch = false) {
-			string ret = "'"+rec.RecipeSet+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" from ";
+			string ret = "'"+rec.RecipeSet+"/"+rec.Category+"/"+rec.CanCraftAnywhere+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" from ";
 			if (fullIngredients) {
 				List<string> li = new List<string>();
 				rec.Costs.ForEach(c => li.Add(ingredientToString(c)));

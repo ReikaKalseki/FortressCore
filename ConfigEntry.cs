@@ -7,8 +7,25 @@ using System.Xml;
 using ReikaKalseki.FortressCore;
 
 namespace ReikaKalseki.FortressCore
-{
-	public sealed class ConfigEntry : Attribute
+{/*
+	public class ConfigEntryArray : ConfigEntry
+	{
+		private readonly ConfigEntry[] values;
+		
+		public ConfigEntryArray(string d, Type t, ConfigEntry[] arr) : base(d, t, arr[0].defaultValue, arr[0].vanillaValue) {
+			values = arr;
+		}
+		
+		public int count() {
+			return values.Length;	
+		}
+		
+		public ConfigEntry getAt(int i) {
+			return values[i];
+		}
+	}*/
+		
+	public class ConfigEntry : Attribute
 	{
 		
 		public readonly string desc;
@@ -17,6 +34,8 @@ namespace ReikaKalseki.FortressCore
 		public readonly float maxValue;
 		public readonly float defaultValue;
 		public readonly float vanillaValue;
+
+		public readonly List<ConfigEntry> children = new List<ConfigEntry>();
 		
 		public ConfigEntry(string d, bool flag) : this(d, typeof(bool), flag ? 1 : 0, 0, 1, 0) {
 			

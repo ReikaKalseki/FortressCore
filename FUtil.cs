@@ -50,6 +50,7 @@ namespace ReikaKalseki.FortressCore
 							{
 								itemStack.mnAmount -= amt;
 								found += amt;
+								amt = 0;
 								if (itemStack.mnAmount == 0)
 									inv.maItemInventory[x, y] = null;
 							}

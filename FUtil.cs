@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Reflection;
-
 using System.Collections.Generic;
+using System.Linq;
+using StackFrame = System.Diagnostics.StackFrame;
 
 using UnityEngine;
 
@@ -9,8 +10,33 @@ namespace ReikaKalseki.FortressCore
 {
 	public static class FUtil {
 		
-		public static void log(string s) {
-			Debug.Log(Assembly.GetExecutingAssembly().GetName().Name.ToUpperInvariant().Replace("PLUGIN_", "")+": "+s);
+		public static readonly Assembly fCoreDLL = Assembly.GetAssembly(typeof(FUtil));
+	    public static readonly Assembly gameDLL = Assembly.GetAssembly(typeof(MachineEntity));
+		
+		internal static Assembly tryGetModDLL(bool acceptFCore = false) {
+			StackFrame[] sf = new System.Diagnostics.StackTrace().GetFrames();
+	        if (sf == null || sf.Length == 0)
+	        	return Assembly.GetCallingAssembly();
+	        foreach (StackFrame f in sf) {
+	        	Assembly a = f.GetMethod().DeclaringType.Assembly;
+	        	if ((a != fCoreDLL || acceptFCore) && a != gameDLL && a.Location.Contains("Mods"))
+	                return a;
+	        }
+	        log("Could not find valid mod assembly: "+string.Join("\n", sf.Select<StackFrame, string>(s => s.GetMethod()+" in "+s.GetMethod().DeclaringType).ToArray()), fCoreDLL);
+	        return Assembly.GetCallingAssembly();
+		}
+	    
+		public static void log(string s, Assembly a = null, int indent = 0) {
+			while (s.Length > 4096) {
+				string part = s.Substring(0, 4096);
+				log(part, a);
+				s = s.Substring(4096);
+			}
+			string id = (a != null ? a : tryGetModDLL()).GetName().Name.ToUpperInvariant().Replace("PLUGIN_", "");
+			if (indent > 0) {
+				s = s.PadLeft(s.Length+indent, ' ');
+			}
+			Debug.Log(id+": "+s);
 		}
 		
 		public static void dropItem(long x, long y, long z, string name) {

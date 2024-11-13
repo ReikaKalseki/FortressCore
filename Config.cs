@@ -1,5 +1,5 @@
 ﻿using System;
-
+using System.IO;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
@@ -10,7 +10,7 @@ namespace ReikaKalseki.FortressCore
 {
 	public class Config<E>
 	{
-		private readonly string filename = "FortressTweaks_Config.xml";
+		private readonly string filename;
 		private readonly Dictionary<string, float> data = new Dictionary<string, float>();
 		
 		private readonly FCoreMod owner;
@@ -31,9 +31,11 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public void load() {
-			string folder = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-			string path = System.IO.Path.Combine(folder, filename);
-			if (System.IO.File.Exists(path))
+			string folder = Path.GetDirectoryName(FUtil.tryGetModDLL().Location);
+			string path = Path.Combine(folder, filename);
+			HashSet<string> missing = new HashSet<string>(data.Keys);
+			bool gen = false;
+			if (File.Exists(path))
 			{
 				FUtil.log("Loading config file at "+path);
 				try
@@ -53,9 +55,14 @@ namespace ReikaKalseki.FortressCore
 							float raw = entry.parse(val.InnerText);
 							float get = raw;
 							if (!entry.validate(ref get)) {
-								FUtil.log("Chosen "+name+" value ("+raw+") was out of bounds, clamed to "+get);
+								FUtil.log("Chosen "+name+" value ("+raw+") was out of bounds, clamped to "+get);
 							}
 							data[name] = get;
+							missing.Remove(name);
+						}
+						catch (ArgumentException ex)
+						{
+							FUtil.log("Config entry "+name+" did not find a corresponding config mapping. Skipping.");
 						}
 						catch (Exception ex)
 						{
@@ -69,9 +76,17 @@ namespace ReikaKalseki.FortressCore
 				{
 					FUtil.log("Config failed to load: "+ex.ToString());
 				}
+				if (missing.Count > 0) {
+					FUtil.log("Config missing the following entries: "+string.Join(", ", missing.ToArray()));
+					FUtil.log("Will generate a fresh copy, with your custom values.");
+					gen = true;
+				}
 			}
 			else {
 				FUtil.log("Config file does not exist at "+path+"; generating.");
+				gen = true;
+			}
+			if (gen) {
 				try
 				{
 					XmlDocument doc = new XmlDocument();
@@ -81,7 +96,7 @@ namespace ReikaKalseki.FortressCore
 						createNode(doc, root, key);
 					}
 					doc.Save(path);
-					FUtil.log("Default config successfully generated.");
+					FUtil.log("Config successfully generated.");
 				}
 				catch (Exception ex)
 				{
@@ -92,12 +107,13 @@ namespace ReikaKalseki.FortressCore
 			
 		private void createNode(XmlDocument doc, XmlElement root, E key) {
 			ConfigEntry e = getEntry(key);
-			XmlElement node = doc.CreateElement(Enum.GetName(typeof(E), key));
+			string name = Enum.GetName(typeof(E), key);
+			XmlElement node = doc.CreateElement(name);
 			
 			XmlComment com = doc.CreateComment(e.desc);
 			
 			XmlElement val = doc.CreateElement("value");
-			val.InnerText = e.formatValue(e.defaultValue);
+			val.InnerText = e.formatValue(data[name]);
 			node.AppendChild(val);
 			
 			XmlElement def = doc.CreateElement("defaultValue");

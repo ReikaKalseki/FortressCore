@@ -141,7 +141,7 @@ namespace ReikaKalseki.FortressCore
 			else if (insn.opcode == OpCodes.Isinst || insn.opcode == OpCodes.Newobj) {
 				return insn.operand == (Type)args[0];
 			}
-			else if (insn.opcode == OpCodes.Ldfld || insn.opcode == OpCodes.Stfld || insn.opcode == OpCodes.Ldsfld || insn.opcode == OpCodes.Stsfld) { //string class, string name
+			else if (insn.opcode == OpCodes.Ldfld || insn.opcode == OpCodes.Stfld || insn.opcode == OpCodes.Ldsfld || insn.opcode == OpCodes.Stsfld) { //Type class, string name
 				FieldInfo info = convertFieldOperand((Type)args[0], (string)args[1]);
 				return insn.operand == info;
 			}
@@ -169,5 +169,78 @@ namespace ReikaKalseki.FortressCore
 		public static string toString(CodeInstruction ci) {
 			return ci.opcode.Name+" "+(ci.operand != null ? ci.operand.ToString() : "");
 		}
+		/*
+		public static void runPatchesIn(HarmonyInstance h, Type parent) {
+       		FileLog.logPath = Path.Combine(Path.GetDirectoryName(parent.Assembly.Location), "harmony-log.txt");
+			FUtil.log("Running harmony patches in "+parent.Assembly.GetName().Name+"::"+parent.Name);
+			FileLog.Log("Running harmony patches in "+parent.Assembly.GetName().Name+"::"+parent.Name);
+			foreach (Type t in parent.GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)) {
+				FileLog.Log("Running harmony patches in "+t.Name);
+				h.Patch(parent);
+			}
+		}*/
+		
+		public static void patchMethod(HarmonyInstance h, Type methodHolder, string name, Type patchHolder, string patchName) {
+       		//FileLog.logPath = Path.Combine(Path.GetDirectoryName(patchHolder.Assembly.Location), "harmony-log.txt");
+			FileLog.Log("Running harmony patch in "+patchHolder.FullName+"::"+patchName+" on "+methodHolder.FullName+"::"+name);
+			MethodInfo m = methodHolder.GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+			if (m == null)
+				throw new Exception("Method "+name+" not found in "+methodHolder.AssemblyQualifiedName);
+			patchMethod(h, m, new HarmonyMethod(AccessTools.Method(patchHolder, patchName, new Type[]{typeof(IEnumerable<CodeInstruction>)})));
+		}
+		
+		public static void patchMethod(HarmonyInstance h, Type methodHolder, string name, Assembly patchHolder, Action<List<CodeInstruction>> patch) {
+       		//FileLog.logPath = Path.Combine(Path.GetDirectoryName(patchHolder.Location), "harmony-log.txt");
+       		FileLog.Log("Running harmony patch from "+patchHolder.GetName().Name+" on "+methodHolder.FullName+"::"+name);
+			MethodInfo m = methodHolder.GetMethod(name, BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+			if (m == null)
+				throw new Exception("Method "+name+" not found in "+methodHolder.FullName);
+			currentPatch = patch;
+			patchMethod(h, m, new HarmonyMethod(AccessTools.Method(MethodBase.GetCurrentMethod().DeclaringType, "patchHook", new Type[]{typeof(IEnumerable<CodeInstruction>)})));
+			currentPatch = null;
+		}
+		
+		public static void patchMethod(HarmonyInstance h, MethodInfo m, Assembly patchHolder, Action<List<CodeInstruction>> patch) {
+       		//FileLog.logPath = Path.Combine(Path.GetDirectoryName(patchHolder.Location), "harmony-log.txt");
+			FileLog.Log("Running harmony patch from "+patchHolder.GetName().Name+" on "+m.DeclaringType.FullName+"::"+m.Name);
+			currentPatch = patch;
+			patchMethod(h, m, new HarmonyMethod(AccessTools.Method(MethodBase.GetCurrentMethod().DeclaringType, "patchHook", new Type[]{typeof(IEnumerable<CodeInstruction>)})));
+			currentPatch = null;
+		}
+		
+		private static Action<List<CodeInstruction>> currentPatch;
+		private static IEnumerable<CodeInstruction> patchHook(IEnumerable<CodeInstruction> instructions) {
+			List<CodeInstruction> codes = new List<CodeInstruction>(instructions);
+			currentPatch.Invoke(codes);
+			//FileLog.Log("Codes are "+InstructionHandlers.toString(codes));
+			return codes.AsEnumerable();
+		}
+		
+		private static void patchMethod(HarmonyInstance h, MethodInfo m, HarmonyMethod patch) {
+			try {
+				h.Patch(m, null, null, patch);
+				FileLog.Log("Done patch");
+			}
+			catch (Exception e) {
+				FileLog.Log("Caught exception when running patch!");
+				FileLog.Log(e.Message);
+				FileLog.Log(e.StackTrace);
+				FileLog.Log(e.ToString());
+			}
+		}
+		
+	    public static Type getTypeBySimpleName(string name) {
+	        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse()) {
+				try {
+		            Type tt = assembly.GetType(name);
+		            if (tt != null)
+		                return tt;
+				}
+				catch {
+					
+				}
+	        }	
+	        return null;
+	    }
 	}
 }

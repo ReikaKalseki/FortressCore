@@ -39,6 +39,11 @@ namespace ReikaKalseki.FortressCore
 			Debug.Log(id+": "+s);
 		}
 		
+		public static void dropItem(long x, long y, long z, ushort block, ushort metadata = 0) {
+	    	ItemBase item = ItemManager.SpawnCubeStack(block, metadata, 1);
+		    DroppedItemData stack = ItemManager.instance.DropItem(item, x, y, z, Vector3.zero);
+		}
+		
 		public static void dropItem(long x, long y, long z, string name) {
 			if (ItemEntry.mEntriesByKey.ContainsKey(name)) {
 		    	ItemBase item = ItemManager.SpawnItem(ItemEntry.mEntriesByKey[name].ItemID);

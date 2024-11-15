@@ -18,7 +18,7 @@ namespace ReikaKalseki.FortressCore
 		public Config(FCoreMod mod)
 		{
 			owner = mod;
-			filename = Environment.UserName+"_"+owner.name+"_Config.xml";
+			filename = Environment.UserName+"_"+owner.modName+"_Config.xml";
 			populateDefaults();
 		}
 		

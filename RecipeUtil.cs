@@ -1,6 +1,7 @@
 ﻿using System;
 
 using System.Collections.Generic;
+using System.Linq;
 
 using UnityEngine;
 
@@ -67,15 +68,25 @@ namespace ReikaKalseki.FortressCore
 			return ret;
 		}
 		
-		public static CraftData addRecipe(string id, string item, string cat, int amt = 1, string set = "Manufacturer") {
+		public static void addRecipe(string id, string item, string cat, int amt = 1, string set = "Manufacturer", Action<CraftData> init = null) {
+			if (cat == "CraftingIngredient")
+				cat = "craftingingredient"; //this is stupid but the XMLs are wrong
+			if (!CraftData.mCraftCategoryDic.ContainsKey(cat)) {
+				FUtil.log("Recipe '"+id+"' specifying a nonexistent crafting category: '"+cat+"'; categories = {"+string.Join(", ", CraftData.mCraftCategoryDic.Keys.ToArray())+"}/["+string.Join(", ", CraftData.mCraftCategories.Select(s => s.category).ToArray())+"]");
+				CraftingCategory addCat = new CraftingCategory(cat, "NoIcon", cat);
+				CraftData.mCraftCategories.Add(addCat);
+				CraftData.mCraftCategoryDic.Add(cat, addCat);
+			}
 			CraftData rec = createNewRecipe();
 			rec.RecipeSet = set;
 			rec.Category = cat;
 			rec.Key = "ReikaKalseki."+id;
 			rec.CraftedKey = item;
 			rec.CraftedAmount = amt;
+			if (init != null)
+				init.Invoke(rec);
 			addRecipe(rec);
-			return rec;
+			CraftData.mCraftCategoryDic[cat].recipes.Add(rec);
 		}
 		
 		public static CraftData addRecipe(CraftData rec) {
@@ -97,6 +108,7 @@ namespace ReikaKalseki.FortressCore
 			}
 			try {
 				CraftData.mRecipesForSet[rec.RecipeSet].Add(rec);
+				CraftData.maCraftData.Add(rec);
 				link(rec);
 				FUtil.log("Added new recipe "+recipeToString(rec, true, true));
 			}
@@ -104,6 +116,21 @@ namespace ReikaKalseki.FortressCore
 				FUtil.log("Invalid recipe cannot be crafted: "+recipeToString(rec)+" -> "+e.ToString());
 			}
 			return rec;
+		}
+		
+		public static void addUncrafting(string recipe, string name, string refundItem = null) {
+	    	CraftData orig = RecipeUtil.getRecipeByKey(recipe);
+	    	CraftCost refund = refundItem == null ? orig.Costs[0] : orig.Costs.First(ing => ing.Key == refundItem);
+	    	RecipeUtil.addRecipe("Uncraft_"+recipe, refund.Key, orig.Category, (int)refund.Amount, init: rr => {
+		       	rr.Tier = orig.Tier;
+		        rr.CanCraftAnywhere = true;
+		        rr.Description = name;
+		        RecipeUtil.addIngredient(rr, orig.CraftedKey, (uint)orig.CraftedAmount);
+		        rr.ScanRequirements.AddRange(orig.ScanRequirements);
+		        foreach (string s in orig.ResearchRequirements)
+		        	RecipeUtil.addResearch(rr, s);
+		        rr.ResearchCost = 0;
+			});
 		}
 		
 		public static CraftData copyRecipe(CraftData template) {

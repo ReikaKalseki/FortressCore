@@ -34,7 +34,7 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public override string ToString() {
-			return xCoord+", "+yCoord+", "+zCoord;
+			return "("+xCoord+", "+yCoord+", "+zCoord+")";
 		}
 		
 		public override int GetHashCode() {

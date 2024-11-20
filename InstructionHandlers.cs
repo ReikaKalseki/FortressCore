@@ -117,6 +117,17 @@ namespace ReikaKalseki.FortressCore
 			return -1;
 		}
 		
+		public static bool matchPattern(List<CodeInstruction> li, int at, params OpCode[] codes) {
+			if (at+codes.Length > li.Count)
+				return false;
+			for (int i = 0; i < codes.Length; i++) {
+				CodeInstruction insn = li[at+i];
+				if (insn.opcode != codes[i])
+					return false;
+			}
+			return true;
+		}
+		
 		public static bool match(CodeInstruction a, CodeInstruction b) {
 			return a.opcode == b.opcode && matchOperands(a.operand, b.operand);
 		}
@@ -147,10 +158,19 @@ namespace ReikaKalseki.FortressCore
 			}
 			else if (insn.opcode == OpCodes.Ldarg) { //int pos
 				return insn.operand == args[0];
-			}/*
-			else if (insn.opcode == OpCodes.Ldc_I4 || insn.opcode == OpCodes.Ldc_R4 || insn.opcode == OpCodes.Ldc_I8 || insn.opcode == OpCodes.Ldc_R8) { //ldc
-				return insn.operand == args[0];
-			}*/
+			}
+			else if (insn.opcode == OpCodes.Ldc_I4) { //ldc
+				return insn.LoadsConstant(Convert.ToInt32(args[0]));
+			}
+			else if (insn.opcode == OpCodes.Ldc_R4) { //ldc
+				return insn.LoadsConstant(Convert.ToSingle(args[0]));
+			}
+			else if (insn.opcode == OpCodes.Ldc_I8) { //ldc
+				return insn.LoadsConstant(Convert.ToInt64(args[0]));
+			}
+			else if (insn.opcode == OpCodes.Ldc_R8) { //ldc
+				return insn.LoadsConstant(Convert.ToDouble(args[0]));
+			}
 			else if (insn.opcode == OpCodes.Ldloc_S || insn.opcode == OpCodes.Stloc_S) { //LocalBuilder contains a pos and type
 				LocalBuilder loc = (LocalBuilder)insn.operand;
 				return args[0] is int && loc.LocalIndex == (int)args[0]/* && loc.LocalType == args[1]*/;
@@ -242,5 +262,92 @@ namespace ReikaKalseki.FortressCore
 	        }	
 	        return null;
 	    }
+		
+		public static void patchEveryReturnPre(List<CodeInstruction> codes, params CodeInstruction[] insert) {
+			patchEveryReturnPre(codes, insert.ToList<CodeInstruction>());
+		}
+		
+		public static void patchEveryReturnPre(List<CodeInstruction> codes, List<CodeInstruction> insert) {
+			patchEveryReturnPre(codes, (li, idx) => li.InsertRange(idx, insert));
+		}
+		
+		public static void patchEveryReturnPre(List<CodeInstruction> codes, Action<List<CodeInstruction>, int> injectHook) {
+			for (int i = codes.Count-1; i >= 0; i--) {
+				if (codes[i].opcode == OpCodes.Ret) {
+					injectHook(codes, i);
+				}
+			}
+		}
+		
+		public static void patchInitialHook(List<CodeInstruction> codes, params CodeInstruction[] insert) {
+			List<CodeInstruction> li = new List<CodeInstruction>();
+			foreach (CodeInstruction c in insert) {
+				li.Add(c);
+			}
+			patchInitialHook(codes, li);
+		}
+		
+		public static void patchInitialHook(List<CodeInstruction> codes, List<CodeInstruction> insert) {
+			for (int i = insert.Count-1; i >= 0; i--) {
+				codes.Insert(0, insert[i]);
+			}
+		}
+		
+		public static List<CodeInstruction> extract(List<CodeInstruction> codes, int from, int to) {
+			List<CodeInstruction> li = new List<CodeInstruction>();
+			for (int i = from; i <= to; i++) {
+				li.Add(codes[i]);
+			}
+			codes.RemoveRange(from, to-from+1);
+			return li;
+		}
+		
+		//everything below this line ported from newer harmony 
+		
+		/// <summary>Tests if the code instruction loads an integer constant</summary>
+		/// <param name="code">The <see cref="CodeInstruction"/></param>
+		/// <param name="number">The integer constant</param>
+		/// <returns>True if the instruction loads the constant</returns>
+		///
+		public static bool LoadsConstant(this CodeInstruction code, long number)
+		{
+			var op = code.opcode;
+			if (number == -1 && op == OpCodes.Ldc_I4_M1) return true;
+			if (number == 0 && op == OpCodes.Ldc_I4_0) return true;
+			if (number == 1 && op == OpCodes.Ldc_I4_1) return true;
+			if (number == 2 && op == OpCodes.Ldc_I4_2) return true;
+			if (number == 3 && op == OpCodes.Ldc_I4_3) return true;
+			if (number == 4 && op == OpCodes.Ldc_I4_4) return true;
+			if (number == 5 && op == OpCodes.Ldc_I4_5) return true;
+			if (number == 6 && op == OpCodes.Ldc_I4_6) return true;
+			if (number == 7 && op == OpCodes.Ldc_I4_7) return true;
+			if (number == 8 && op == OpCodes.Ldc_I4_8) return true;
+			if (op != OpCodes.Ldc_I4 && op != OpCodes.Ldc_I4_S && op != OpCodes.Ldc_I8) return false;
+			return Convert.ToInt64(code.operand) == number;
+		}
+
+		/// <summary>Tests if the code instruction loads a floating point constant</summary>
+		/// <param name="code">The <see cref="CodeInstruction"/></param>
+		/// <param name="number">The floating point constant</param>
+		/// <returns>True if the instruction loads the constant</returns>
+		///
+		public static bool LoadsConstant(this CodeInstruction code, double number)
+		{
+			if (code.opcode != OpCodes.Ldc_R4 && code.opcode != OpCodes.Ldc_R8) return false;
+			double val = Convert.ToDouble(code.operand);
+			return Math.Abs(val-number) < 0.001;
+		}
+
+		/// <summary>Tests if the code instruction loads a string constant</summary>
+		/// <param name="code">The <see cref="CodeInstruction"/></param>
+		/// <param name="str">The string</param>
+		/// <returns>True if the instruction loads the constant</returns>
+		///
+		public static bool LoadsConstant(this CodeInstruction code, string str)
+		{
+			if (code.opcode != OpCodes.Ldstr) return false;
+			var val = Convert.ToString(code.operand);
+			return val == str;
+		}
 	}
 }

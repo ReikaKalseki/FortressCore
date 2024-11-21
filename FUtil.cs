@@ -110,6 +110,27 @@ namespace ReikaKalseki.FortressCore
 			}
 			return found;
 		}
+	    
+		public static string getFullHierarchyPath(this Transform current) { //just like in SN
+			if (current.parent == null)
+				return "Root:" + current.name;
+			return current.parent.getFullHierarchyPath() + "/" + current.name;
+		}
+	    
+	    public static string getFullHierarchyPath(this Component component) {
+			return component.transform.getFullHierarchyPath() + "/" + component.GetType().ToString();
+		}
+	    
+	    public static string getFullHierarchyPath(this GameObject go) {
+	    	return getFullHierarchyPath(go.transform);
+		}
+	    
+	    public static GameObject getRoot(this GameObject go) {
+	    	Transform t = go.transform;
+	    	while (t.parent != null)
+	    		t = t.parent;
+	    	return t.gameObject;
+		}
 		
 	}
 }

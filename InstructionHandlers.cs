@@ -128,6 +128,17 @@ namespace ReikaKalseki.FortressCore
 			return true;
 		}
 		
+		public static bool matchPattern(List<CodeInstruction> li, int at, params CodeInstruction[] codes) {
+			if (at+codes.Length > li.Count)
+				return false;
+			for (int i = 0; i < codes.Length; i++) {
+				CodeInstruction insn = li[at+i];
+				if (!match(insn, codes[i]))
+				    return false;
+			}
+			return true;
+		}
+		
 		public static bool match(CodeInstruction a, CodeInstruction b) {
 			return a.opcode == b.opcode && matchOperands(a.operand, b.operand);
 		}

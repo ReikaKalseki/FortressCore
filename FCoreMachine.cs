@@ -13,6 +13,11 @@ namespace ReikaKalseki.FortressCore
 			this.mbNeedsLowFrequencyUpdate = true;
 			this.mbNeedsUnityUpdate = true;
 		}
+
+		public FCoreMachine(MachineEntityCreationParameters parameters) : base(parameters) {
+			this.mbNeedsLowFrequencyUpdate = true;
+			this.mbNeedsUnityUpdate = true;
+		}
 		
 		public override string ToString() {
 			return GetType().Name+" @ "+new Coordinate(this).ToString();

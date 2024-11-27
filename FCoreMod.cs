@@ -16,7 +16,7 @@ namespace ReikaKalseki.FortressCore
 		protected FCoreMod(string n)
 		{
 			modName = n;
-			FUtil.log("Initializing mod '"+n+"' in DLL "+modDLL.Location);
+			FUtil.log("Initializing mod '"+n+"' in DLL "+modDLL.Location+" @ "+FUtil.getTime());
 			
 			harmony = HarmonyInstance.Create(modName);
 	        HarmonyInstance.DEBUG = true;
@@ -28,8 +28,8 @@ namespace ReikaKalseki.FortressCore
 	        	FUtil.log("Cannot run harmony - no harmony instance!");
 				return;
 			}
-	        FileLog.Log("Ran mod register, started harmony (harmony log)");
-	        FUtil.log("Ran mod register, started harmony");
+	        FileLog.Log("Ran "+modName+" register, started harmony (harmony log) @ "+FUtil.getTime());
+	        FUtil.log("Ran mod register, started harmony @ "+FUtil.getTime());
 	        
 	        try {
 				//InstructionHandlers.runPatchesIn(harmony, patchHolder);

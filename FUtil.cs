@@ -12,6 +12,10 @@ namespace ReikaKalseki.FortressCore
 		
 		public static readonly Assembly fCoreDLL = Assembly.GetAssembly(typeof(FUtil));
 	    public static readonly Assembly gameDLL = Assembly.GetAssembly(typeof(MachineEntity));
+	    
+	    public static string getTime() {
+	    	return DateTime.Now.ToString("dd-MM-yyyy @ HH:mm:ss.FFF");
+	    }
 		
 		internal static Assembly tryGetModDLL(bool acceptFCore = false) {
 			StackFrame[] sf = new System.Diagnostics.StackTrace().GetFrames();
@@ -131,6 +135,47 @@ namespace ReikaKalseki.FortressCore
 	    		t = t.parent;
 	    	return t.gameObject;
 		}
+	    
+	    public static void dumpObjectData(this GameObject go) {
+	    	go.dumpObjectData(0);
+		}
+	    
+		private static void dumpObjectData(this GameObject go, int indent) {
+			if (!go) {
+				log("null object");
+				return;
+			}
+			log("object "+go, fCoreDLL, indent);
+			log("chain "+go.getFullHierarchyPath(), fCoreDLL, indent);
+			log("components: "+string.Join(", ", go.GetComponents<Component>().Select(c => c.name).ToArray()), fCoreDLL, indent);
+			log("transform: "+go.transform, fCoreDLL, indent);
+			if (go.transform != null) {
+				log("position: "+go.transform.position, fCoreDLL, indent);
+				log("transform object: "+go.transform.gameObject, fCoreDLL, indent);
+				for (int i = 0; i < go.transform.childCount; i++) {
+					log("child object #"+i+": ", fCoreDLL, indent);
+					dumpObjectData(go.transform.GetChild(i).gameObject, indent+3);
+				}
+			}
+		}
+	    
+	    public static string getBlockName(ushort id, ushort meta) {
+	    	if (id > TerrainData.mEntries.Length || TerrainData.mEntries[id] == null)
+	    		return "Unknown Block ID #"+id;
+	    	TerrainDataEntry entry = TerrainData.mEntries[id];
+	    	return entry.Values.Count > meta && entry.Values[meta] != null ? entry.Values[meta].Name : entry.Name;
+	    }
+	    
+	    public static string getItemName(int id) {
+	    	return ItemEntry.mEntriesById.ContainsKey(id) ? ItemEntry.mEntriesById[id].Name : "Unknown Item ID #"+id;
+	    }
+	    
+	    public static uint getOrePerBar(bool basicSmelter = false) {
+			int amt = (int)Mathf.Ceil(16*DifficultySettings.mrResourcesFactor);
+			if (basicSmelter && !DifficultySettings.mbCasualResource)
+				amt *= 4;
+			return (uint)amt;
+	    }
 		
 	}
 }

@@ -28,7 +28,7 @@ namespace ReikaKalseki.FortressCore
 			return li;
 		}
 		
-		public static void modifyIngredientCount(CraftData rec, string item, uint newAmt) {
+		public static void modifyIngredientCount(this CraftData rec, string item, uint newAmt) {
 			foreach (CraftCost ing in rec.Costs) {
 				if (ing.Key == item) {
 					ing.Amount = newAmt;
@@ -37,7 +37,7 @@ namespace ReikaKalseki.FortressCore
 			}
 		}
 		
-		public static CraftCost removeIngredient(CraftData rec, string item) {
+		public static CraftCost removeIngredient(this CraftData rec, string item) {
 			for (int i = rec.Costs.Count-1; i >= 0; i--) {
 				CraftCost ing = rec.Costs[i];
 				if (ing.Key == item) {
@@ -49,7 +49,7 @@ namespace ReikaKalseki.FortressCore
 			return null;
 		}
 		
-		public static CraftCost addIngredient(CraftData rec, string item, uint amt) {
+		public static CraftCost addIngredient(this CraftData rec, string item, uint amt) {
 			CraftCost cost = new CraftCost();
 			cost.Amount = amt;
 			cost.Key = item;
@@ -59,8 +59,16 @@ namespace ReikaKalseki.FortressCore
 			return cost;
 		}
 		
-		private static CraftData createNewRecipe() {
+		public static CraftCost replaceIngredient(this CraftData rec, string item, string with, float scale = 1) {
+			CraftCost rem = removeIngredient(rec, item);
+			if (rem == null)
+				return null;
+			return addIngredient(rec, with, (uint)Mathf.Max(1, rem.Amount*scale));
+		}
+		
+		public static CraftData createNewRecipe(string id) {
 			CraftData ret = new CraftData();
+			ret.Key = "ReikaKalseki."+id;
 			ret.Costs = new List<CraftCost>();
 			ret.ScanRequirements = new List<string>();
 			ret.ResearchRequirements = new List<string>();
@@ -68,33 +76,36 @@ namespace ReikaKalseki.FortressCore
 			return ret;
 		}
 		
-		public static void addRecipe(string id, string item, string cat, int amt = 1, string set = "Manufacturer", Action<CraftData> init = null) {
+		public static CraftData addRecipe(string id, string item, string cat, int amt = 1, string set = "Manufacturer", Action<CraftData> init = null) {
 			if (cat == "CraftingIngredient")
 				cat = "craftingingredient"; //this is stupid but the XMLs are wrong
-			if (!CraftData.mCraftCategoryDic.ContainsKey(cat)) {
+			bool isManu = set == "Manufacturer";
+			if (isManu && !CraftData.mCraftCategoryDic.ContainsKey(cat)) {
 				FUtil.log("Recipe '"+id+"' specifying a nonexistent crafting category: '"+cat+"'; categories = {"+string.Join(", ", CraftData.mCraftCategoryDic.Keys.ToArray())+"}/["+string.Join(", ", CraftData.mCraftCategories.Select(s => s.category).ToArray())+"]");
 				CraftingCategory addCat = new CraftingCategory(cat, "NoIcon", cat);
 				CraftData.mCraftCategories.Add(addCat);
 				CraftData.mCraftCategoryDic.Add(cat, addCat);
 			}
-			CraftData rec = createNewRecipe();
+			CraftData rec = createNewRecipe(id);
 			rec.RecipeSet = set;
 			rec.Category = cat;
-			rec.Key = "ReikaKalseki."+id;
 			rec.CraftedKey = item;
 			rec.CraftedAmount = amt;
 			if (init != null)
 				init.Invoke(rec);
 			addRecipe(rec);
-			CraftData.mCraftCategoryDic[cat].recipes.Add(rec);
+			if (isManu)
+				CraftData.mCraftCategoryDic[cat].recipes.Add(rec);
+			return rec;
 		}
 		
 		public static CraftData addRecipe(CraftData rec) {
+			bool isManu = rec.RecipeSet == "Manufacturer";
 			if (string.IsNullOrEmpty(rec.Key)) {
 				FUtil.log("Invalid recipe missing key and cannot be crafted: "+recipeToString(rec));
 				return rec;
 			}
-			if (string.IsNullOrEmpty(rec.Category)) {
+			if (string.IsNullOrEmpty(rec.Category) && isManu) {
 				FUtil.log("Invalid recipe missing category and cannot be crafted: "+recipeToString(rec));
 				return rec;
 			}
@@ -108,7 +119,8 @@ namespace ReikaKalseki.FortressCore
 			}
 			try {
 				CraftData.mRecipesForSet[rec.RecipeSet].Add(rec);
-				CraftData.maCraftData.Add(rec);
+				if (isManu)
+					CraftData.maCraftData.Add(rec);
 				link(rec);
 				FUtil.log("Added new recipe "+recipeToString(rec, true, true));
 			}
@@ -150,7 +162,7 @@ namespace ReikaKalseki.FortressCore
 			}
 		}
 		
-		public static void removeResearch(CraftData rec, string key) {
+		public static void removeResearch(this CraftData rec, string key) {
 			rec.ResearchRequirements.Remove(key);
         	ResearchDataEntry e = ResearchDataEntry.GetResearchDataEntry(key);
         	if (e != null) {
@@ -159,7 +171,7 @@ namespace ReikaKalseki.FortressCore
         	}
 		}
 		
-		public static void addResearch(CraftData rec, string key) {
+		public static void addResearch(this CraftData rec, string key) {
 			rec.ResearchRequirements.Add(key);
         	ResearchDataEntry e = ResearchDataEntry.GetResearchDataEntry(key);
         	if (e != null) {
@@ -168,11 +180,11 @@ namespace ReikaKalseki.FortressCore
         	}
 		}
 		
-		public static string ingredientToString(CraftCost ing) {
+		public static string ingredientToString(this CraftCost ing) {
 			return ing.Key+" x "+ing.Amount+" ("+ing.Name+")";
 		}
 		
-		public static string recipeToString(CraftData rec, bool fullIngredients = false, bool fullResearch = false) {
+		public static string recipeToString(this CraftData rec, bool fullIngredients = false, bool fullResearch = false) {
 			string ret = "'"+rec.RecipeSet+"/"+rec.Category+"/"+rec.CanCraftAnywhere+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" from ";
 			if (fullIngredients) {
 				List<string> li = new List<string>();
@@ -190,6 +202,38 @@ namespace ReikaKalseki.FortressCore
 				ret += rec.ResearchRequirements.Count+" techs";
 			}
 			return ret;
+		}
+		
+		public static ProjectItemRequirement removeIngredient(this ResearchDataEntry rec, string item) {
+			for (int i = rec.ProjectItemRequirements.Count-1; i >= 0; i--) {
+				ProjectItemRequirement ing = rec.ProjectItemRequirements[i];
+				if (ing.Key == item) {
+					rec.ProjectItemRequirements.RemoveAt(i);
+					FUtil.log("Removed "+item+" from research "+rec.Key);
+					return ing;
+				}
+			}
+			return null;
+		}
+		
+		public static ProjectItemRequirement addIngredient(this ResearchDataEntry rec, string item, int amt) {
+			ProjectItemRequirement cost = new ProjectItemRequirement();
+			cost.Amount = amt;
+			cost.Key = item;
+			if (ItemEntry.mEntriesByKey.ContainsKey(item))
+				cost.ItemID = ItemEntry.mEntriesByKey[item].ItemID;
+			if (TerrainData.mEntriesByKey.ContainsKey(item))
+				cost.CubeType = TerrainData.mEntriesByKey[item].CubeType;
+			rec.ProjectItemRequirements.Add(cost);
+			FUtil.log("Added "+amt+" of "+item+" to research "+rec.Key);
+			return cost;
+		}
+		
+		public static ProjectItemRequirement replaceIngredient(this ResearchDataEntry rec, string item, string with, float scale = 1) {
+			ProjectItemRequirement rem = removeIngredient(rec, item);
+			if (rem == null)
+				return null;
+			return addIngredient(rec, with, (int)Mathf.Max(1, rem.Amount*scale));
 		}
 		
 	}

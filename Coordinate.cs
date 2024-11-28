@@ -6,7 +6,9 @@
  * 
  * To change this template use Tools | Options | Coding | Edit Standard Headers.
  */
+ 
 using System;
+using System.IO;
 using UnityEngine;
 
 namespace ReikaKalseki.FortressCore
@@ -67,6 +69,16 @@ namespace ReikaKalseki.FortressCore
 
 		public Vector3 asVector3() {
 			return new Vector3(xCoord, yCoord, zCoord);
+		}
+		
+		public void write(BinaryWriter writer) {
+			writer.Write(xCoord);
+			writer.Write(yCoord);
+			writer.Write(zCoord);
+		}
+		
+		public static Coordinate read(BinaryReader reader) {
+			return new Coordinate(reader.ReadInt64(), reader.ReadInt64(), reader.ReadInt64());
 		}
 		
 		public static bool operator == (Coordinate leftSide, Coordinate rightSide) {

@@ -181,7 +181,7 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public static string ingredientToString(this CraftCost ing) {
-			return ing.Key+" x "+ing.Amount+" ("+ing.Name+")";
+			return ing.Key+" x "+ing.Amount+" ("+ing.Name+") ["+ing.CubeType+"/"+ing.CubeValue+"]/#"+ing.ItemType;
 		}
 		
 		public static string recipeToString(this CraftData rec, bool fullIngredients = false, bool fullResearch = false) {

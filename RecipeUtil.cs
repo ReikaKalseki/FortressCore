@@ -50,11 +50,17 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public static CraftCost addIngredient(this CraftData rec, string item, uint amt) {
+			return addIngredient(rec, item, amt, true);
+		}
+		
+		private static CraftCost addIngredient(this CraftData rec, string item, uint amt, bool checkAdd) {
 			CraftCost cost = new CraftCost();
 			cost.Amount = amt;
 			cost.Key = item;
 			rec.Costs.Add(cost);
 			FUtil.log("Added "+amt+" of "+item+" to recipe "+recipeToString(rec, true));
+			if (checkAdd && rec.Costs.Count > 5 && rec.RecipeSet == "Manufacturer")
+				FUtil.log("WARNING: RECIPE NOW HAS "+rec.Costs.Count+" INGREDIENTS, BUT THE CRAFTING UI CAN ONLY DISPLAY FIVE!");
 			link(rec);
 			return cost;
 		}
@@ -63,8 +69,44 @@ namespace ReikaKalseki.FortressCore
 			CraftCost rem = removeIngredient(rec, item);
 			if (rem == null)
 				return null;
-			return addIngredient(rec, with, (uint)Mathf.Max(1, rem.Amount*scale));
+			return addIngredient(rec, with, (uint)Mathf.Max(1, rem.Amount*scale), false);
 		}
+		
+		public static CraftCost replaceIngredients(this CraftData rec, string with, uint forcedAmount = 0, params string[] replace) {
+			uint use = 0;
+			foreach (string s in replace) {
+				CraftCost rem = removeIngredient(rec, s);
+				if (rem == null)
+					continue;
+				use = Math.Max(use, rem.Amount);
+			}
+			if (forcedAmount > 0)
+				use = forcedAmount;
+			return addIngredient(rec, with, use, false);
+		}
+    
+	    public static CraftCost addItemPerN(this CraftData rec, string add, float perN, uint amtPerN = 1) {
+			float num = rec.CraftedAmount*perN;
+			if (num-(int)num > 0.1)
+				throw new Exception("Recipe '"+rec.Key+"' does not make an integer amount ["+num+"] when multiplied by "+perN);
+	    	rec.CraftedAmount = (int)num;
+	    	rec.Costs.ForEach(cc => cc.Amount = (uint)(cc.Amount*perN));
+	    	rec.CraftTime *= perN;
+	    	return rec.addIngredient(add, amtPerN);
+	    }
+		
+		public static void scaleIOExcept(this CraftData rec, float scale, params string[] except) {
+			scaleIOExcept(rec, scale, new HashSet<string>(except));
+		}
+    
+		public static void scaleIOExcept(this CraftData rec, float scale, IEnumerable<string> except) {
+			float num = rec.CraftedAmount*scale;
+			if (num-(int)num > 0.1)
+				throw new Exception("Recipe '"+rec.Key+"' does not make an integer amount ["+num+"] when multiplied by "+scale);
+	    	rec.CraftedAmount = (int)num;
+	    	rec.Costs.ForEach(cc => {if (!except.Contains(cc.Key)) {cc.Amount = (uint)(cc.Amount*scale);}});
+	    	rec.CraftTime *= scale;
+	    }
 		
 		public static CraftData createNewRecipe(string id) {
 			CraftData ret = new CraftData();
@@ -189,14 +231,14 @@ namespace ReikaKalseki.FortressCore
 			if (fullIngredients) {
 				List<string> li = new List<string>();
 				rec.Costs.ForEach(c => li.Add(ingredientToString(c)));
-				ret += "I["+string.Join(", ", li.ToArray())+"]";
+				ret += "I"+li.Count+"["+string.Join(", ", li.ToArray())+"]";
 			}
 			else {
 				ret += rec.Costs.Count+" items";
 			}
 			ret += " & ";
 			if (fullResearch) {
-				ret += "T["+string.Join(", ", rec.ResearchRequirements.ToArray())+"]";
+				ret += "T"+rec.ResearchRequirements.Count+"["+string.Join(", ", rec.ResearchRequirements.ToArray())+"]";
 			}
 			else {
 				ret += rec.ResearchRequirements.Count+" techs";

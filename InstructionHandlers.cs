@@ -59,12 +59,17 @@ namespace ReikaKalseki.FortressCore
 		
 		public static MethodInfo convertMethodOperand(Type owner, string name, bool instance, params Type[] args) {
 			MethodInfo ret = AccessTools.Method(owner, name, args);
+			if (ret == null)
+				throw new Exception("No such method '"+owner.Name+"::"+name+"("+string.Join(", ", args.Select(t => t.Name).ToArray())+") [static="+!instance+"]");
 			//ret.IsStatic = !instance;
 			return ret;
 		}
 		
 		public static FieldInfo convertFieldOperand(Type owner, string name) {
-			return AccessTools.Field(owner, name);
+			FieldInfo ret = AccessTools.Field(owner, name);
+			if (ret == null)
+				throw new Exception("No such field '"+owner.Name+"::"+name);
+			return ret;
 		}
 		
 		public static int getInstruction(List<CodeInstruction> li, int start, int index, OpCode opcode, params object[] args) {

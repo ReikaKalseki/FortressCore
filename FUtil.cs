@@ -174,7 +174,26 @@ namespace ReikaKalseki.FortressCore
 			int amt = (int)Mathf.Ceil(16*DifficultySettings.mrResourcesFactor);
 			if (basicSmelter && !DifficultySettings.mbCasualResource)
 				amt *= 4;
-			return (uint)amt;
+			return (uint)Math.Max(1, amt);
+	    }
+	    
+	    public static void setMachineModel(MachineEntity e, SpawnableObjectEnum mdl) {
+    		e.mObjectType = mdl;
+			e.mWrapper = SpawnableObjectManagerScript.instance.SpawnObject(eGameObjectWrapperType.Entity, e.mObjectType, e.mnX, e.mnY, e.mnZ, e.mFlags, e);
+	    }
+	    
+	    public static string blockToString(Segment s, long x, long y, long z) {
+	    	int dx = (int)(x%16);
+	    	int dy = (int)(y%16);
+	    	int dz = (int)(z%16);
+	    	ushort id;
+	    	CubeData data;
+	    	s.GetCubeDataNoChecking(dx, dy, dz, out id, out data);
+	    	return "ID/value ["+id+"/"+data.mValue+"] = "+getBlockName(id, data.mValue);
+	    }
+	    
+	    public static string machineToString(SegmentEntity e) {
+	    	return e.GetType().Name+" @ "+new Coordinate(e).ToString()+" in block "+blockToString(e.mSegment, e.mnX, e.mnY, e.mnZ);
 	    }
 		
 	}

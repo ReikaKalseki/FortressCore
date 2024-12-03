@@ -81,6 +81,10 @@ namespace ReikaKalseki.FortressCore
 			return new Coordinate(reader.ReadInt64(), reader.ReadInt64(), reader.ReadInt64());
 		}
 		
+		public static Coordinate fromRawXYZ(long x, long y, long z) {
+			return new Coordinate(x-WorldUtil.COORD_OFFSET, y-WorldUtil.COORD_OFFSET, z-WorldUtil.COORD_OFFSET);
+		}
+		
 		public static bool operator == (Coordinate leftSide, Coordinate rightSide) {
 		    if (object.ReferenceEquals(null, leftSide))
 		        return object.ReferenceEquals(null, rightSide);

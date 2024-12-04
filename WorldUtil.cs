@@ -74,5 +74,48 @@ namespace ReikaKalseki.FortressCore
 			return s.isSegmentValid();
 		}
 		
+		public static Biomes getBiome(SegmentEntity e) {
+			return getBiome(e.mnY);
+		}
+		
+		public static Biomes getBiome(long mnY) {
+			long depth = -(mnY - COORD_OFFSET);
+			if (depth < 40)
+				return Biomes.SURFACE;
+			else if (depth < BiomeLayer.CavernColdCeiling)
+				return Biomes.UPPERCAVES;
+			else if (depth < BiomeLayer.CavernColdFloor)
+				return Biomes.COLDCAVES;
+			else if (depth < BiomeLayer.CavernToxicCeiling)
+				return Biomes.LOWERCAVES;
+			else if (depth < BiomeLayer.CavernToxicFloor)
+				return Biomes.TOXICCAVES;
+			else if (depth < BiomeLayer.CavernMagmaCeiling)
+				return Biomes.DEEPCAVES;
+			else if (depth < BiomeLayer.CavernMagmaFloor+50)
+				return Biomes.MAGMACAVES;
+			else
+				return Biomes.BELOWLAVA;
+		}
+		/*
+		public float getBiomeTemperature(Biomes b) {
+			switch (b) {
+				default:
+					return -20;
+			}
+		}*/
+		
+		public enum Biomes {
+			SURFACE,
+			UPPERCAVES,
+			COLDCAVES,
+			LOWERCAVES,
+			TOXICCAVES,
+			DEEPCAVES,
+			MAGMACAVES,
+			BELOWLAVA
+			
+		}
+		
 	}
 }

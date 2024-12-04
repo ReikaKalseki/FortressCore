@@ -147,7 +147,7 @@ namespace ReikaKalseki.FortressCore
 			}
 			log("object "+go, fCoreDLL, indent);
 			log("chain "+go.getFullHierarchyPath(), fCoreDLL, indent);
-			log("components: "+string.Join(", ", go.GetComponents<Component>().Select(c => c.name).ToArray()), fCoreDLL, indent);
+			log("components: "+string.Join(", ", go.GetComponents<Component>().Select(c => c.name+"["+c.GetType().Name+"]").ToArray()), fCoreDLL, indent);
 			log("transform: "+go.transform, fCoreDLL, indent);
 			if (go.transform != null) {
 				log("position: "+go.transform.position, fCoreDLL, indent);
@@ -192,8 +192,49 @@ namespace ReikaKalseki.FortressCore
 	    	return "ID/value ["+id+"/"+data.mValue+"] = "+getBlockName(id, data.mValue);
 	    }
 	    
-	    public static string machineToString(SegmentEntity e) {
+	    public static string machineToString(this SegmentEntity e) {
 	    	return e.GetType().Name+" @ "+new Coordinate(e).ToString()+" in block "+blockToString(e.mSegment, e.mnX, e.mnY, e.mnZ);
+	    }
+	    
+	    public static string terrainDataValueToString(this TerrainDataValueEntry e) {
+	    	return e.Key+":"+e.Value+", '"+e.Name+"', icon="+e.IconName;
+	    }
+	    
+	    public static MultiblockData registerMultiblock(ModRegistrationData data, string name, MultiblockData.VanillaMultiblockPrefab pfb) {
+	    	return registerMultiblock(data, name, null, pfb);
+	    }
+	    
+	    public static MultiblockData registerMultiblock(ModRegistrationData data, string name, Dimensions dd) {
+	    	return registerMultiblock(data, name, dd, null);
+	    }
+	    
+	    private static MultiblockData registerMultiblock(ModRegistrationData data, string name, Dimensions dd, MultiblockData.VanillaMultiblockPrefab pfb) {
+	    	try {
+				data.RegisterEntityHandler("ReikaKalseki."+name);
+				data.RegisterEntityHandler("ReikaKalseki."+name+"Placement");
+				data.RegisterEntityHandler("ReikaKalseki."+name+"Block");
+				data.RegisterEntityHandler("ReikaKalseki."+name+"Center");
+				data.RegisterEntityHandler("ReikaKalseki."+name+"CenterFlip");
+				
+				TerrainDataEntry terrainDataEntry;
+				TerrainDataValueEntry terrainDataValueEntry;
+				TerrainData.GetCubeByKey("ReikaKalseki."+name, out terrainDataEntry, out terrainDataValueEntry);
+				
+				ushort placerMeta = ModManager.mModMappings.CubesByKey["MachinePlacement"].ValuesByKey["ReikaKalseki."+name+"Placement"].Value;
+				ushort bodyMeta = ModManager.mModMappings.CubesByKey["ReikaKalseki."+name].ValuesByKey["ReikaKalseki."+name+"Block"].Value;
+				ushort centerMeta = ModManager.mModMappings.CubesByKey["ReikaKalseki."+name].ValuesByKey["ReikaKalseki."+name+"Center"].Value;
+				ushort centerFlipMeta = pfb == null || !pfb.size.isAsymmetric ? centerMeta : ModManager.mModMappings.CubesByKey["ReikaKalseki."+name].ValuesByKey["ReikaKalseki."+name+"CenterFlip"].Value;
+				
+				FUtil.log("Registered multiblock "+name+" with ID "+terrainDataEntry.CubeType+" and values "+bodyMeta+"/"+centerMeta+"/"+centerFlipMeta+", placer value = "+placerMeta);
+				
+				if (pfb != null)
+					return new MultiblockData(terrainDataEntry.CubeType, placerMeta, bodyMeta, centerMeta, centerFlipMeta, pfb);
+				else
+					return new MultiblockData(terrainDataEntry.CubeType, placerMeta, bodyMeta, centerMeta, centerFlipMeta, dd);
+	    	}
+	    	catch (NullReferenceException ex) {
+	    		throw new Exception("Could not register multiblock '"+name+"', due to a missing terrain entry; is the XML data present and complete?", ex);
+	    	}
 	    }
 		
 	}

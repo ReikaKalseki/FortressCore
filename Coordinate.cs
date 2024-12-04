@@ -27,6 +27,10 @@ namespace ReikaKalseki.FortressCore
 			zCoord = z;
 		}
 		
+		public Coordinate(MobEntity e) : this(e.mnX-WorldUtil.COORD_OFFSET, e.mnY-WorldUtil.COORD_OFFSET, e.mnZ-WorldUtil.COORD_OFFSET) {
+		
+		}
+		
 		public Coordinate(SegmentEntity e) : this(e.mnX-WorldUtil.COORD_OFFSET, e.mnY-WorldUtil.COORD_OFFSET, e.mnZ-WorldUtil.COORD_OFFSET) {
 		
 		}

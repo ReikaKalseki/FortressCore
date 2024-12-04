@@ -109,7 +109,11 @@ namespace ReikaKalseki.FortressCore
 	    }
 		
 		public static CraftData createNewRecipe(string id) {
-			CraftData ret = new CraftData();
+			return createNewRecipe<CraftData>(id);
+		}
+		
+		public static R createNewRecipe<R>(string id) where R : CraftData {
+			R ret = new R();
 			ret.Key = "ReikaKalseki."+id;
 			ret.Costs = new List<CraftCost>();
 			ret.ScanRequirements = new List<string>();
@@ -160,7 +164,10 @@ namespace ReikaKalseki.FortressCore
 				return rec;
 			}
 			try {
-				CraftData.mRecipesForSet[rec.RecipeSet].Add(rec);
+				if (CraftData.mRecipesForSet.ContainsKey(rec.RecipeSet))
+					CraftData.mRecipesForSet[rec.RecipeSet].Add(rec);
+				else
+					FUtil.log("Recipe "+rec.recipeToString()+" has a set not in the table!");
 				if (isManu)
 					CraftData.maCraftData.Add(rec);
 				link(rec);

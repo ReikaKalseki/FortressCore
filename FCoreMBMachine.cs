@@ -115,6 +115,30 @@ namespace ReikaKalseki.FortressCore
 				}
 			}
 		}
+		
+		public override sealed string getName() {
+			return multiblockData.name;
+		}
+		
+		public override sealed string GetPopupText() {
+			if (this.mLinkedCenter != null) {
+				return this.mLinkedCenter.GetPopupText();
+			}
+			return base.GetPopupText()+"\n"+GetUIText();
+		}
+		
+		public virtual string GetUIText() {
+			return "";
+		}
+		
+		protected override bool setupHolobaseVisuals(Holobase hb, out GameObject model, out Vector3 size, out Color color) {
+			if (!base.setupHolobaseVisuals(hb, out model, out size, out color))
+				return false;
+			if (!mbIsCenter)
+				return false;
+			size = new Vector3((float)this.machineBounds.width, (float)this.machineBounds.height, (float)this.machineBounds.depth);
+			return true;
+		}
 
 		public override sealed void OnDelete() {
 			base.OnDelete();

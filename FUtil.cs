@@ -236,6 +236,13 @@ namespace ReikaKalseki.FortressCore
 	    		throw new Exception("Could not register multiblock '"+name+"', due to a missing terrain entry; is the XML data present and complete?", ex);
 	    	}
 	    }
+    
+		public static int getHoppersItemCount(int itemID, StorageMachineInterface[] hoppers, int hopperCount) {
+			int num = 0;
+			for (int i = 0; i < hopperCount; i++)
+				num += hoppers[i].CountItems(itemID);
+			return num;
+		}
 		
 	}
 }

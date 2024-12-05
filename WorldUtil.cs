@@ -82,17 +82,17 @@ namespace ReikaKalseki.FortressCore
 			long depth = -(mnY - COORD_OFFSET);
 			if (depth < 40)
 				return Biomes.SURFACE;
-			else if (depth < BiomeLayer.CavernColdCeiling)
+			else if (depth < -BiomeLayer.CavernColdCeiling)
 				return Biomes.UPPERCAVES;
-			else if (depth < BiomeLayer.CavernColdFloor)
+			else if (depth < -BiomeLayer.CavernColdFloor)
 				return Biomes.COLDCAVES;
-			else if (depth < BiomeLayer.CavernToxicCeiling)
+			else if (depth < -BiomeLayer.CavernToxicCeiling)
 				return Biomes.LOWERCAVES;
-			else if (depth < BiomeLayer.CavernToxicFloor)
+			else if (depth < -BiomeLayer.CavernToxicFloor)
 				return Biomes.TOXICCAVES;
-			else if (depth < BiomeLayer.CavernMagmaCeiling)
+			else if (depth < -BiomeLayer.CavernMagmaCeiling)
 				return Biomes.DEEPCAVES;
-			else if (depth < BiomeLayer.CavernMagmaFloor+50)
+			else if (depth < -BiomeLayer.CavernMagmaFloor+50)
 				return Biomes.MAGMACAVES;
 			else
 				return Biomes.BELOWLAVA;

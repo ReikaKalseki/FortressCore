@@ -112,7 +112,7 @@ namespace ReikaKalseki.FortressCore
 			return createNewRecipe<CraftData>(id);
 		}
 		
-		public static R createNewRecipe<R>(string id) where R : CraftData {
+		public static R createNewRecipe<R>(string id) where R : CraftData, new() {
 			R ret = new R();
 			ret.Key = "ReikaKalseki."+id;
 			ret.Costs = new List<CraftCost>();

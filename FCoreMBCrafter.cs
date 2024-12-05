@@ -32,6 +32,8 @@ namespace ReikaKalseki.FortressCore {
 			Processing,
 			OutOfStorage
 		}
+		
+		//public bool autoRecipe { get { return lockedRecipe == null; } }
 
 		public float currentPower { get; private set; }
 
@@ -43,9 +45,11 @@ namespace ReikaKalseki.FortressCore {
 
 		private readonly List<R> recipes;
 
-		private ItemBase mCreatedItem;
+		private ItemBase outputBuffer;
+		
+		public bool clogged { get; private set; }
 
-		private int mEntityVersion;
+		public int mEntityVersion { get; private set; }
 
 		private List<StorageMachineInterface> mAttachedHoppers = new List<StorageMachineInterface>();
 
@@ -68,6 +72,8 @@ namespace ReikaKalseki.FortressCore {
 		public float mrStateTimer { get; private set; }
 
 		public byte mnAttachedHoppers { get; private set; }
+		
+		//protected R lockedRecipe;
 
 		protected FCoreMBCrafter(ModCreateSegmentEntityParameters parameters, MultiblockData mb, float pps, float maxPower, float maxIO, List<R> li) : base(parameters, mb) {
 			if (maxPower < pps)
@@ -88,7 +94,7 @@ namespace ReikaKalseki.FortressCore {
 			}
 			else {
 				powerPerSecond = 0;
-				maxPower = 0;
+				mrMaxPower = 0;
 				mrMaxTransferRate = 0;
 				recipes = new List<R>();
 			}
@@ -96,6 +102,10 @@ namespace ReikaKalseki.FortressCore {
 
 		public override void LowFrequencyUpdate() {
 			base.LowFrequencyUpdate();
+			if (mrMaxPower <= 0 && mLinkedCenter == null) {
+				FloatingCombatTextManager.instance.QueueText(this.mnX, mnY, this.mnZ, 0.25F, "Ticking non-center without a linked center!", Color.red, 5f, 32f);
+				return;
+			}
 			if (this.mbIsCenter && WorldScript.mbIsServer) {
 				int num = 1;
 				if (this.mAttachedMassStorage.Count == 0 && this.mAttachedHoppers.Count == 0) {
@@ -158,26 +168,49 @@ namespace ReikaKalseki.FortressCore {
 				}
 			}
 		}
-
-		private void UpdateWaitingForResources() {
-			this.InitCounters();
+		
+		protected bool tryPullItems(string item, int amt = 1) {
 			if (this.mAttachedHoppers.Count > 0) {
 				for (int i = this.mAttachedHoppers.Count-1; i >= 0; i--) {
-					StorageMachineInterface storageMachineInterface = this.mAttachedHoppers[i];
-					if (storageMachineInterface == null || ((SegmentEntity)storageMachineInterface).mbDelete) {
+					StorageMachineInterface smi = this.mAttachedHoppers[i];
+					if (smi == null || ((SegmentEntity)smi).mbDelete) {
 						this.mAttachedHoppers.RemoveAt(i);
 					}
 					else {
-						eHopperPermissions permissions = storageMachineInterface.GetPermissions();
+						eHopperPermissions permissions = smi.GetPermissions();
 						if (permissions == eHopperPermissions.RemoveOnly || permissions == eHopperPermissions.AddAndRemove) {
-							storageMachineInterface.IterateContents(new IterateItem(this.IterateHopperItem), null);
+							if (smi.TryExtractItems(this, ItemEntry.mEntriesByKey[item].ItemID, amt))
+								return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
+
+		private void UpdateWaitingForResources() {
+			//if (autoRecipe) {
+			this.InitCounters();
+			if (this.mAttachedHoppers.Count > 0) {
+				for (int i = this.mAttachedHoppers.Count - 1; i >= 0; i--) {
+					StorageMachineInterface smi = this.mAttachedHoppers[i];
+					if (smi == null || ((SegmentEntity)smi).mbDelete) {
+						this.mAttachedHoppers.RemoveAt(i);
+					}
+					else {
+						eHopperPermissions permissions = smi.GetPermissions();
+						if (permissions == eHopperPermissions.RemoveOnly || permissions == eHopperPermissions.AddAndRemove) {
+							smi.IterateContents(new IterateItem(this.IterateHopperItem), null);
 						}
 					}
 				}
 			}
 			for (int j = 0; j < this.mRecipeCounters.Length; j++) {
 				int num = (j + this.mnPreviousRecipeIndex + 1) % this.mRecipeCounters.Length;
+				if (!isRecipeCurrentlyAccessible(recipes[num]))
+					continue;
 				int[] array = this.mRecipeCounters[num];
+				//FUtil.log("Checking recipe "+recipes[num].recipeToString(true)+" with arr = ["+string.Join(", ", array.Select(s => s.ToString()).ToArray())+"]");
 				bool flag = true;
 				for (int k = 0; k < array.Length; k++) {
 					if (array[k] > 0) {
@@ -186,6 +219,7 @@ namespace ReikaKalseki.FortressCore {
 					}
 				}
 				if (flag) {
+					//FUtil.log("Recipe valid");
 					this.mnPreviousRecipeIndex = num;
 					this.currentRecipe = recipes[num];
 					processTimer = currentRecipe.CraftTime;
@@ -193,14 +227,35 @@ namespace ReikaKalseki.FortressCore {
 					this.RemoveIngredients();
 					return;
 				}
+			}/*
+				for (int l = 0; l < this.mRecipeCounters.Length; l++) {
+					int[] array2 = this.mRecipeCounters[l];
+					int num2 = 0;
+					for (int m = 0; m < array2.Length; m++) {
+						num2 += (int)(recipes[l].Costs[m].Amount - (uint)array2[m]);
+					}
+				}*/
+			/*
 			}
-			for (int l = 0; l < this.mRecipeCounters.Length; l++) {
-				int[] array2 = this.mRecipeCounters[l];
-				int num2 = 0;
-				for (int m = 0; m < array2.Length; m++) {
-					num2 += (int)(recipes[l].Costs[m].Amount - (uint)array2[m]);
+			else {
+				bool flag = mAttachedHoppers.Count > 0;
+				foreach (CraftCost cc in lockedRecipe) {
+					
 				}
-			}
+				if (flag) {
+					this.currentRecipe = lockedRecipe;
+					processTimer = currentRecipe.CraftTime;
+					this.SetNewOperatingState(OperatingState.Processing);
+					this.RemoveIngredients();
+				}
+				else {
+					currentRecipe = null;
+				}
+			}*/
+		}
+		
+		protected virtual bool isRecipeCurrentlyAccessible(R recipe) {
+			return true;
 		}
 
 		private void RemoveIngredients() {
@@ -258,34 +313,33 @@ namespace ReikaKalseki.FortressCore {
 		private bool IterateHopperItem(ItemBase item, object userState) {
 			for (int i = 0; i < this.mRecipeCounters.Length; i++) {
 				int[] array = this.mRecipeCounters[i];
-				bool flag = false;
-				bool flag2 = true;
+				//bool flag = false;
+				//bool flag2 = true;
 				for (int j = 0; j < array.Length; j++) {
 					CraftCost craftCost = recipes[i].Costs[j];
-					if (!flag) {
+					//if (!flag) {
 						if (craftCost.CubeType != 0 && item.mType == ItemType.ItemCubeStack) {
-							ItemCubeStack itemCubeStack = item as ItemCubeStack;
-							if (itemCubeStack.mCubeType == craftCost.CubeType && itemCubeStack.mCubeValue == craftCost.CubeValue) {
-								ARTHERPetSurvival.instance.GotOre(itemCubeStack.mCubeType);
-								array[j] -= itemCubeStack.mnAmount;
-								flag = true;
+							ItemCubeStack ics = item as ItemCubeStack;
+							if (ics.mCubeType == craftCost.CubeType && ics.mCubeValue == craftCost.CubeValue) {
+								ARTHERPetSurvival.instance.GotOre(ics.mCubeType);
+								array[j] -= ics.mnAmount;
+								//flag = true;
 							}
 						}
-						else
-						if (item.mnItemID == craftCost.ItemType) {
+						else if (item.mnItemID == craftCost.ItemType) {
 							array[j] -= ItemManager.GetCurrentStackSize(item);
-							flag = true;
+							//flag = true;
 						}
-					}
+					/*}
 					if (array[j] > 0) {
 						flag2 = false;
-					}
-				}
+					}*/
+				}/*
 				if (flag2) {
 					return false;
-				}
+				}*/
 			}
-			return true;
+			return true; //returning false stops iteration
 		}
 
 		private bool IterateCrateItem(ItemBase item) {
@@ -303,8 +357,7 @@ namespace ReikaKalseki.FortressCore {
 								flag = true;
 							}
 						}
-						else
-						if (item.mnItemID == craftCost.ItemType) {
+						else if (item.mnItemID == craftCost.ItemType) {
 							array[j] -= ItemManager.GetCurrentStackSize(item);
 							flag = true;
 						}
@@ -325,6 +378,9 @@ namespace ReikaKalseki.FortressCore {
 				this.SetNewOperatingState(OperatingState.WaitingOnResources);
 				return;
 			}
+			if (!canProcess()) {
+				return;
+			}
 			this.currentPower -= this.powerPerSecond * LowFrequencyThread.mrPreviousUpdateTimeStep;
 			if (this.currentPower < 0f) {
 				this.currentPower = 0f;
@@ -333,11 +389,26 @@ namespace ReikaKalseki.FortressCore {
 			}
 			this.processTimer -= LowFrequencyThread.mrPreviousUpdateTimeStep;
 			if (this.processTimer <= 0f) {
-				this.mCreatedItem = ItemManager.SpawnItem(this.currentRecipe.CraftableItemType);
+				clogged = false;
+				ItemStack toAdd = (ItemStack)ItemManager.SpawnItem(this.currentRecipe.CraftableItemType);
+				toAdd.mnAmount = currentRecipe.CraftedAmount;
+				if (outputBuffer != null) {
+					if (!ItemManager.StackWholeItems(outputBuffer, toAdd, true)) {
+						clogged = true;
+						return;
+					}
+				}
+				else {
+					this.outputBuffer = toAdd;
+				}
 				if (!this.AttemptToOffload()) {
 					this.SetNewOperatingState(OperatingState.OutOfStorage);
 				}
 			}
+		}
+		
+		protected virtual bool canProcess() {
+			return true;
 		}
 
 		private void UpdateOutOfStorage() {
@@ -353,8 +424,8 @@ namespace ReikaKalseki.FortressCore {
 					}
 					else {
 						eHopperPermissions perms = smi.GetPermissions();
-						if ((perms == eHopperPermissions.AddOnly || perms == eHopperPermissions.AddAndRemove) && !smi.IsFull() && smi.TryInsert(this, this.mCreatedItem)) {
-							this.mCreatedItem = null;
+						if ((perms == eHopperPermissions.AddOnly || perms == eHopperPermissions.AddAndRemove) && !smi.IsFull() && smi.TryInsert(this, this.outputBuffer)) {
+							this.outputBuffer = null;
 							this.SetNewOperatingState(OperatingState.WaitingOnResources);
 							return true;
 						}
@@ -483,11 +554,18 @@ namespace ReikaKalseki.FortressCore {
 			writer.Write(this.mEntityVersion);
 			writer.Write(this.currentPower);
 			writer.Write((byte)this.mOperatingState);
-			if (this.mAttachedHoppers != null) {
+			writer.Write(this.processTimer);
+			if (this.mAttachedHoppers != null)
 				writer.Write((byte)this.mAttachedHoppers.Count);
-				return;
-			}
-			writer.Write(0);
+			else
+				writer.Write(0);
+			ItemFile.SerialiseItem(this.outputBuffer, writer);
+			/*
+			if (lockedRecipe == null)
+				writer.Write(string.Empty);
+			else
+				writer.Write(lockedRecipe.Key);
+				*/
 		}
 
 		public override void Read(BinaryReader reader, int entityVersion) {
@@ -498,15 +576,20 @@ namespace ReikaKalseki.FortressCore {
 			this.mEntityVersion = reader.ReadInt32();
 			this.currentPower = reader.ReadSingle();
 			this.mOperatingState = (OperatingState)reader.ReadByte();
+			processTimer = reader.ReadSingle();
+			this.mnAttachedHoppers = reader.ReadByte();
+			outputBuffer = ItemFile.DeserialiseItem(reader);
 			if (this.currentPower < 0f) {
 				this.currentPower = 0f;
 			}
 			if (this.currentPower > this.mrMaxPower) {
 				this.currentPower = this.mrMaxPower;
 			}
-			if (entityVersion >= 1) {
-				this.mnAttachedHoppers = reader.ReadByte();
-			}
+			/*
+			string forced = reader.ReadString();
+			if (!string.IsNullOrEmpty(forced)) {
+				lockedRecipe = recipes.FirstOrDefault(r => r.Key == forced);
+			}*/
 		}
 
 		public float GetRemainingPowerCapacity() {
@@ -517,6 +600,9 @@ namespace ReikaKalseki.FortressCore {
 		}
 
 		public float GetMaximumDeliveryRate() {
+			if (this.mLinkedCenter != null) {
+				return this.mLinkedCenter.GetMaximumDeliveryRate();
+			}
 			return this.mrMaxTransferRate;
 		}
 
@@ -528,6 +614,10 @@ namespace ReikaKalseki.FortressCore {
 		}
 
 		public bool DeliverPower(float amount) {
+			if (mrMaxPower <= 0 && mLinkedCenter == null) {
+				FloatingCombatTextManager.instance.QueueText(this.mnX, mnY, this.mnZ, 0.25F, "Tried to deliver power to non-center without a linked center!", Color.red, 5f, 32f);
+				return false;
+			}
 			if (this.mLinkedCenter != null) {
 				return this.mLinkedCenter.DeliverPower(amount);
 			}
@@ -543,23 +633,13 @@ namespace ReikaKalseki.FortressCore {
 			return this.mLinkedCenter == null || this.mLinkedCenter.WantsPowerFromEntity(entity);
 		}
 
-		public override string GetPopupText() {
-			if (this.mLinkedCenter != null) {
-				return this.mLinkedCenter.GetPopupText();
-			}
-			string text = multiblockData.name;
-			string text2 = text;
-			text = string.Concat(new string[] {
-				text2,
-				"\nPower: ",
-				this.currentPower.ToString("N0"),
-				"/",
-				this.mrMaxPower.ToString("N0")
-			});
-			text = text + "\nNeeds " + this.powerPerSecond.ToString() + " PPS";
+		public override string GetUIText() {
+			string text = "Power: "+currentPower.ToString("N0")+"/"+mrMaxPower.ToString("N0")+" ("+this.powerPerSecond.ToString("N0") + " PPS)";
+			//text = text + "\nNeeds " + this.powerPerSecond.ToString() + " PPS";
+			/*
 			if (WorldScript.mbIsServer) {
 				if (this.mAttachedMassStorage.Count == 0 && this.mAttachedHoppers.Count == 0) {
-					text += "\nNo Attached Storage Hoppers or Mass Storage found";
+					text += "\nNo Storage Hoppers or Mass Storage";
 				}
 				else {
 					if (this.mAttachedMassStorage.Count > 0) {
@@ -593,16 +673,20 @@ namespace ReikaKalseki.FortressCore {
 					this.mnAttachedHoppers,
 					" Storage Hoppers."
 				});
-			}
+			}*/
 			text = text + "\nState: " + this.mOperatingState;
 			if (this.mOperatingState == OperatingState.Processing) {
 				if (this.currentRecipe != null) {
-					text = text + "\nProcessing: " + this.currentRecipe.CraftedName+", "+this.processTimer.ToString("N1") + "s";
+					if (canProcess())
+						text = text + "\nProcessing: " + this.currentRecipe.CraftedName+", "+this.processTimer.ToString("N1") + "s";
+					//else
+					//	text += "\nProcessing blocked.";
 				}
 			}
-			if (this.mOperatingState == OperatingState.WaitingOnResources) {
-				text += "\nMissing ingredients.";
-			}
+			if (outputBuffer != null)
+				text += "\nStoring "+outputBuffer.GetName()+" x"+outputBuffer.GetAmount();
+			if (clogged)
+				text += "\nOutput buffer full.";
 			return text;
 		}
 

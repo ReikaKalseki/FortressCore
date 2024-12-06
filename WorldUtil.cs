@@ -105,6 +105,35 @@ namespace ReikaKalseki.FortressCore
 			}
 		}*/
 		
+		public static void buildBlockAtLook(LocalPlayerScript ep, ItemBase with, ushort id, ushort value) {
+			long selectFaceX = ep.mPlayerBlockPicker.selectFaceX;
+			long selectFaceY = ep.mPlayerBlockPicker.selectFaceY;
+			long selectFaceZ = ep.mPlayerBlockPicker.selectFaceZ;
+			if (ep.mBuilder.BuildOrientation(selectFaceX, selectFaceY, selectFaceZ, id, value, 65)) {
+				FUtil.log(string.Concat(new string[] {
+					"Building cube ",
+					global::TerrainData.GetNameForValue(id, value),
+					" for item ",
+					ItemManager.GetItemName(with),
+					" (parameter: ",
+					ItemEntry.mEntries[with.mnItemID].ActionParameter,
+					")"
+				}));
+				if (!CubeHelper.HasEntity((int)id))
+				{
+					FUtil.log(string.Concat(new string[] {
+						"Build block cube ",
+						global::TerrainData.GetNameForValue(id, value),
+						" does not have an entity to apply given item ",
+						ItemManager.GetItemName(with.mnItemID),
+						"! why would you need an item to build this?"
+					}));
+					return;
+				}
+				ep.mBuilder.QueueItemApplication(with, ep.mPlayerBlockPicker.selectFaceX, ep.mPlayerBlockPicker.selectFaceY, ep.mPlayerBlockPicker.selectFaceZ);
+			}
+		}
+		
 		public enum Biomes {
 			SURFACE,
 			UPPERCAVES,

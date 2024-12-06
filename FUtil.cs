@@ -182,6 +182,14 @@ namespace ReikaKalseki.FortressCore
 			e.mWrapper = SpawnableObjectManagerScript.instance.SpawnObject(eGameObjectWrapperType.Entity, e.mObjectType, e.mnX, e.mnY, e.mnZ, e.mFlags, e);
 	    }
 	    
+	    public static string blockToString(Coordinate c, MachineEntity e) {
+	    	return blockToString(c, e.AttemptGetSegment);
+	    }
+	    
+	    public static string blockToString(Coordinate c, Func<long, long, long, Segment> segmentGetter) {
+	    	return blockToString(c.getSegment(segmentGetter), c.xCoord, c.yCoord, c.zCoord);
+	    }
+	    
 	    public static string blockToString(Segment s, long x, long y, long z) {
 	    	int dx = (int)(x%16);
 	    	int dy = (int)(y%16);

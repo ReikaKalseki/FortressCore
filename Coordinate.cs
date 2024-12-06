@@ -70,9 +70,17 @@ namespace ReikaKalseki.FortressCore
 		public Coordinate toWorld(SegmentEntity e) {
 			return offset(-e.mnX, -e.mnY, -e.mnZ);
 		}
+		
+		public Coordinate fromRaw() {
+			return offset(-WorldUtil.COORD_OFFSET, -WorldUtil.COORD_OFFSET, -WorldUtil.COORD_OFFSET);
+		}
 
 		public Vector3 asVector3() {
 			return new Vector3(xCoord, yCoord, zCoord);
+		}
+		
+		public Segment getSegment(Func<long, long, long, Segment> segmentGetter) {
+			return segmentGetter(xCoord, yCoord, zCoord);
 		}
 		
 		public void write(BinaryWriter writer) {
@@ -87,6 +95,13 @@ namespace ReikaKalseki.FortressCore
 		
 		public static Coordinate fromRawXYZ(long x, long y, long z) {
 			return new Coordinate(x-WorldUtil.COORD_OFFSET, y-WorldUtil.COORD_OFFSET, z-WorldUtil.COORD_OFFSET);
+		}
+		
+		public static Coordinate fromLook(LocalPlayerScript ep, bool toReal = true) {
+			long x = ep.mPlayerBlockPicker.selectFaceX;
+			long y = ep.mPlayerBlockPicker.selectFaceY;
+			long z = ep.mPlayerBlockPicker.selectFaceZ;
+			return toReal ? fromRawXYZ(x, y, z) : new Coordinate(x, y, z);
 		}
 		
 		public static bool operator == (Coordinate leftSide, Coordinate rightSide) {

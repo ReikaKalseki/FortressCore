@@ -50,11 +50,20 @@ namespace ReikaKalseki.FortressCore
 		
 		public static void dropItem(long x, long y, long z, string name) {
 			if (ItemEntry.mEntriesByKey.ContainsKey(name)) {
-		    	ItemBase item = ItemManager.SpawnItem(ItemEntry.mEntriesByKey[name].ItemID);
-		    	DroppedItemData stack = ItemManager.instance.DropItem(item, x, y, z, Vector3.zero);
+	    		dropItem(x, y, z, ItemEntry.mEntriesByKey[name].ItemID);
 	    	}
 	    	else {
 	    		log("NO SUCH ITEM TO DROP: "+name);
+	    	}
+		}
+		
+		public static void dropItem(long x, long y, long z, int id) {
+			if (id > 0) {
+		    	ItemBase item = ItemManager.SpawnItem(id);
+		    	DroppedItemData stack = ItemManager.instance.DropItem(item, x, y, z, Vector3.zero);
+	    	}
+	    	else {
+	    		log("NO SUCH ITEM ID TO DROP: "+id);
 	    	}
 		}
 		
@@ -163,7 +172,8 @@ namespace ReikaKalseki.FortressCore
 	    	if (id > TerrainData.mEntries.Length || TerrainData.mEntries[id] == null)
 	    		return "Unknown Block ID #"+id;
 	    	TerrainDataEntry entry = TerrainData.mEntries[id];
-	    	return entry.Values.Count > meta && entry.Values[meta] != null ? entry.Values[meta].Name : entry.Name;
+	    	TerrainDataValueEntry value = entry.GetValue(meta);
+	    	return value != null ? value.Name : entry.Name;
 	    }
 	    
 	    public static string getItemName(int id) {
@@ -201,11 +211,27 @@ namespace ReikaKalseki.FortressCore
 	    }
 	    
 	    public static string machineToString(this SegmentEntity e) {
+	    	if (e == null)
+	    		return "<NULL>";
 	    	return e.GetType().Name+" @ "+new Coordinate(e).ToString()+" in block "+blockToString(e.mSegment, e.mnX, e.mnY, e.mnZ);
 	    }
 	    
+	    public static string machineToStringNoWorld(this SegmentEntity e) {
+	    	if (e == null)
+	    		return "<NULL>";
+	    	return e.GetType().Name+" @ "+new Coordinate(e).ToString()+" mdl="+(e is MachineEntity ? ((MachineEntity)e).mObjectType.ToString() : "none");
+	    }
+	    
+	    public static string terrainDataToString(this TerrainDataEntry e) {
+	    	if (e == null)
+	    		return "<NULL>";
+	    	return e.Key+" '"+e.Name+"', icon="+e.IconName+" mod="+(e.ModEntityHandler == null ? "None" : e.ModEntityHandler.GetType().Name)+" Values=\n"+string.Join("\n", e.Values.Select(s => s.terrainDataValueToString()).ToArray());
+	    }
+	    
 	    public static string terrainDataValueToString(this TerrainDataValueEntry e) {
-	    	return e.Key+":"+e.Value+", '"+e.Name+"', icon="+e.IconName;
+	    	if (e == null)
+	    		return "<NULL>";
+	    	return e.Key+":"+e.Value+", '"+e.Name+"', icon="+e.IconName+" mod="+(e.ModEntityHandler == null ? "None" : e.ModEntityHandler.GetType().Name);
 	    }
 	    
 	    public static MultiblockData registerMultiblock(ModRegistrationData data, string name, MultiblockData.VanillaMultiblockPrefab pfb) {
@@ -245,10 +271,28 @@ namespace ReikaKalseki.FortressCore
 	    	}
 	    }
     
-		public static int getHoppersItemCount(int itemID, StorageMachineInterface[] hoppers, int hopperCount) {
+		public static int removeFromInventory(int itemID, int amt, StorageMachineInterface hopper, StorageUserInterface user) {
+	    	if (hopper == null)
+	    		return 0;
+	    	if (hopper is StorageHopper) {
+	    		return ((StorageHopper)hopper).RemoveInventoryItem(itemID, amt);
+	    	}
+	    	else {
+	    		ItemBase trash;
+	    		return hopper.TryPartialExtractItems(user, itemID, amt, out trash);
+	    	}
+		}
+    
+		public static int getCount(int itemID, StorageMachineInterface hopper) {
+	    	return hopper == null ? 0 : hopper.CountItems(itemID);
+		}
+    
+		public static int getHoppersItemCount(int itemID, StorageMachineInterface[] hoppers) {
+	    	if (hoppers == null || hoppers.Length == 0)
+	    		return 0;
 			int num = 0;
-			for (int i = 0; i < hopperCount; i++)
-				num += hoppers[i].CountItems(itemID);
+			for (int i = 0; i < hoppers.Length; i++)
+				num += getCount(itemID, hoppers[i]);
 			return num;
 		}
 		

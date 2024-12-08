@@ -50,6 +50,8 @@ namespace ReikaKalseki.FortressCore
 			}
 			
 			private void doCheck() {
+				if (player == null)
+					return;
 				PlayerInventory inv = player.mInventory;
 		    	int id = ItemEntry.GetIDFromKey(itemID, true);
 		    	cachedValue = id > 0 && (includeMainInventory ? inv.GetSuitAndInventoryItemCount(id) : inv.GetSuitItemCount(id)) > 0;

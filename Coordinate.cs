@@ -83,6 +83,10 @@ namespace ReikaKalseki.FortressCore
 			return segmentGetter(xCoord, yCoord, zCoord);
 		}
 		
+		public ushort getBlock(Segment s) {
+			return s.GetCube(xCoord, yCoord, zCoord);
+		}
+		
 		public void write(BinaryWriter writer) {
 			writer.Write(xCoord);
 			writer.Write(yCoord);

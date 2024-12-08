@@ -234,7 +234,7 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		public static string recipeToString(this CraftData rec, bool fullIngredients = false, bool fullResearch = false) {
-			string ret = "'"+rec.RecipeSet+"/"+rec.Category+"/"+rec.CanCraftAnywhere+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" from ";
+			string ret = "'"+rec.RecipeSet+"/"+rec.Category+"/"+rec.CanCraftAnywhere+"::"+rec.Key+"'="+rec.CraftedKey+"x"+rec.CraftedAmount+" ("+rec.CraftTime.ToString("0.00")+") from ";
 			if (fullIngredients) {
 				List<string> li = new List<string>();
 				rec.Costs.ForEach(c => li.Add(ingredientToString(c)));

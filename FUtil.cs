@@ -295,6 +295,41 @@ namespace ReikaKalseki.FortressCore
 				num += getCount(itemID, hoppers[i]);
 			return num;
 		}
+	    
+	    public static int getOreTier(ushort id) {
+	    	switch(id) {
+	    		case eCubeTypes.OreTin:
+	    		case eCubeTypes.OreCopper:
+	    			return 0;
+	    		case eCubeTypes.OreIron:
+	    		case eCubeTypes.OreLithium:
+	    			return 1;
+	    		case eCubeTypes.OreNickel:
+	    		case eCubeTypes.OreGold:
+	    		case eCubeTypes.OreTitanium:
+	    			return 2;
+	    		case eCubeTypes.OreBioMass:
+	    		case eCubeTypes.OreCrystal:
+	    			return 3;
+	    		case eCubeTypes.OreDiamond_T4_2: //molybdenum
+	    		case eCubeTypes.OreEmerald_T4_1: //chromium
+	    			return 4;
+	    		case eCubeTypes.OreRuby_T5_1: //superhard rock
+	    		case eCubeTypes.Magmacite:
+	    			return 5;
+	    		case eCubeTypes.Uranium_T7: //also used by nuclear reactor mod
+	    			return 6;
+	    	}
+	    	return -1;
+	    }
+	    
+	    public static IEnumerable<TerrainDataEntry> getOres() {
+	    	return TerrainData.mEntries.Where(e => e != null && e.Category == MaterialCategories.Ore);
+	    }
+	    
+	    public static IEnumerable<ushort> getOreIDs() {
+	    	return getOres().Select(e => e.CubeType);
+	    }
 		
 	}
 }

@@ -298,6 +298,7 @@ namespace ReikaKalseki.FortressCore
 	    
 	    public static int getOreTier(ushort id) {
 	    	switch(id) {
+	    		case eCubeTypes.OreCoal:
 	    		case eCubeTypes.OreTin:
 	    		case eCubeTypes.OreCopper:
 	    			return 0;
@@ -324,11 +325,27 @@ namespace ReikaKalseki.FortressCore
 	    }
 	    
 	    public static IEnumerable<TerrainDataEntry> getOres() {
-	    	return TerrainData.mEntries.Where(e => e != null && e.Category == MaterialCategories.Ore);
+	    	return TerrainData.mEntries.Where(e => e != null && e.Category == MaterialCategories.Ore && e.Key != "EnrichedCoal" && e.Key != "InfusedCoal");
 	    }
 	    
 	    public static IEnumerable<ushort> getOreIDs() {
 	    	return getOres().Select(e => e.CubeType);
+	    }
+	    
+	    public static void sortOreList(List<ushort> li) {
+	    	li.Sort((t1, t2) => {
+	    	    int tier1 = getOreTier(t1);
+	    	    int tier2 = getOreTier(t2);
+	    	    return tier1 == tier2 ? t1.CompareTo(t2) : tier1.CompareTo(tier2);
+	    	});
+	    }
+	    
+	    public static void sortOreList(List<TerrainDataEntry> li) {
+	    	li.Sort((t1, t2) => {
+	    	    int tier1 = getOreTier(t1.CubeType);
+	    	    int tier2 = getOreTier(t2.CubeType);
+	    	    return tier1 == tier2 ? t1.CubeType.CompareTo(t2.CubeType) : tier1.CompareTo(tier2);
+	    	});
 	    }
 		
 	}

@@ -348,5 +348,26 @@ namespace ReikaKalseki.FortressCore
 	    	});
 	    }
 		
+		public static bool isFFDefenceOffline() {
+			return CentralPowerHub.Destroyed || !CCCCC.ActiveAndWorking || !WorldUtil.anyCryoExists();
+		}
+	    
+	    public static ushort getPipeOrientation(Vector3 vec) {
+	    	int idx = -1;
+	    	if (vec.y > 0)
+	    		return 2;
+	    	else if (vec.x > 0)
+	    		idx = 0;
+	    	else if (vec.z > 0)
+	    		idx = 1;
+	    	else if (vec.x < 0)
+	    		idx = 2;
+	    	else if (vec.z < 0)
+	    		idx = 3;
+	    	else if (vec.y < 0)
+	    		idx = 4;
+	    	return EntityManager.pipeOrientations[idx];
+	    }
+		
 	}
 }

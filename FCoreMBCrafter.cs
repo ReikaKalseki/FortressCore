@@ -49,7 +49,7 @@ namespace ReikaKalseki.FortressCore {
 		
 		public bool clogged { get; private set; }
 
-		public int mEntityVersion { get; private set; }
+		public int entityVersion { get; private set; }
 
 		private List<StorageMachineInterface> mAttachedHoppers = new List<StorageMachineInterface>();
 
@@ -65,9 +65,9 @@ namespace ReikaKalseki.FortressCore {
 
 		public float processTimer { get; private set; }
 
-		public OperatingState mOperatingState { get; private set; }
+		public OperatingState state { get; private set; }
 
-		private int[][] mRecipeCounters;
+		private readonly int[][] mRecipeCounters;
 
 		public float mrStateTimer { get; private set; }
 
@@ -120,11 +120,11 @@ namespace ReikaKalseki.FortressCore {
 
 		private void SetNewOperatingState(OperatingState newState) {
 			this.mrStateTimer = 0f;
-			this.mOperatingState = newState;
+			this.state = newState;
 		}
 
 		private void UpdateOperatingState() {
-			switch (this.mOperatingState) {
+			switch (this.state) {
 				case OperatingState.WaitingOnResources:
 					this.UpdateWaitingForResources();
 					return;
@@ -560,7 +560,7 @@ namespace ReikaKalseki.FortressCore {
 		}
 
 		public sealed override int GetVersion() {
-			return this.mEntityVersion;
+			return this.entityVersion;
 		}
 
 		public override void Write(BinaryWriter writer) {
@@ -568,9 +568,9 @@ namespace ReikaKalseki.FortressCore {
 			if (!this.mbIsCenter) {
 				return;
 			}
-			writer.Write(this.mEntityVersion);
+			writer.Write(this.entityVersion);
 			writer.Write(this.currentPower);
-			writer.Write((byte)this.mOperatingState);
+			writer.Write((byte)this.state);
 			writer.Write(this.processTimer);
 			if (this.mAttachedHoppers != null)
 				writer.Write((byte)this.mAttachedHoppers.Count);
@@ -590,9 +590,9 @@ namespace ReikaKalseki.FortressCore {
 			if (!this.mbIsCenter) {
 				return;
 			}
-			this.mEntityVersion = reader.ReadInt32();
+			this.entityVersion = reader.ReadInt32();
 			this.currentPower = reader.ReadSingle();
-			this.mOperatingState = (OperatingState)reader.ReadByte();
+			this.state = (OperatingState)reader.ReadByte();
 			processTimer = reader.ReadSingle();
 			this.mnAttachedHoppers = reader.ReadByte();
 			outputBuffer = ItemFile.DeserialiseItem(reader);
@@ -691,13 +691,21 @@ namespace ReikaKalseki.FortressCore {
 					" Storage Hoppers."
 				});
 			}*/
-			text = text + "\nState: " + this.mOperatingState;
-			if (this.mOperatingState == OperatingState.Processing) {
+			text = text + "\nState: " + this.state;
+			if (this.state == OperatingState.Processing) {
 				if (this.currentRecipe != null) {
 					if (canProcess())
 						text = text + "\nProcessing: " + this.currentRecipe.CraftedName+", "+this.processTimer.ToString("N1") + "s";
 					//else
 					//	text += "\nProcessing blocked.";
+				}
+			}
+			else if (this.state == OperatingState.WaitingOnResources && recipes.Count == 1) {
+				R recipe = recipes[0];
+				int[] need = mRecipeCounters[0];
+				for (int i = 0; i < recipe.Costs.Count; i++) {
+					int has = (int)(recipe.Costs[i].Amount-need[i]);
+					text += "\n  "+recipe.Costs[i].Name+": "+has+"/"+recipe.Costs[i].Amount;
 				}
 			}
 			if (outputBuffer != null)

@@ -27,6 +27,10 @@ namespace ReikaKalseki.FortressCore
 			zCoord = z;
 		}
 		
+		public Coordinate(Player e) : this(e.mnWorldX-WorldUtil.COORD_OFFSET, e.mnWorldY-WorldUtil.COORD_OFFSET, e.mnWorldZ-WorldUtil.COORD_OFFSET) {
+		
+		}
+		
 		public Coordinate(MobEntity e) : this(e.mnX-WorldUtil.COORD_OFFSET, e.mnY-WorldUtil.COORD_OFFSET, e.mnZ-WorldUtil.COORD_OFFSET) {
 		
 		}
@@ -61,6 +65,10 @@ namespace ReikaKalseki.FortressCore
 		
 		public long getTaxicabDistance(Coordinate other) {
 			return other.xCoord-xCoord+other.yCoord-yCoord+other.zCoord-zCoord;
+		}
+
+		public Coordinate offset(long d) {
+			return offset(d, d, d);
 		}
 
 		public Coordinate offset(long x, long y, long z) {

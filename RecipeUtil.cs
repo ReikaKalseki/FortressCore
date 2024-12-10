@@ -54,6 +54,10 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		private static CraftCost addIngredient(this CraftData rec, string item, uint amt, bool checkAdd) {
+			if (!ItemEntry.mEntriesByKey.ContainsKey(item)) {
+				FUtil.log("Could not add item '"+item+"' to recipe "+rec.Key+" - it does not exist!");
+				return null;
+			}
 			CraftCost cost = new CraftCost();
 			cost.Amount = amt;
 			cost.Key = item;
@@ -140,8 +144,6 @@ namespace ReikaKalseki.FortressCore
 			if (init != null)
 				init.Invoke(rec);
 			addRecipe(rec);
-			if (isManu)
-				CraftData.mCraftCategoryDic[cat].recipes.Add(rec);
 			return rec;
 		}
 		
@@ -168,8 +170,10 @@ namespace ReikaKalseki.FortressCore
 					CraftData.mRecipesForSet[rec.RecipeSet].Add(rec);
 				else
 					FUtil.log("Recipe "+rec.recipeToString()+" has a set not in the table!");
-				if (isManu)
+				if (isManu) {
 					CraftData.maCraftData.Add(rec);
+					CraftData.mCraftCategoryDic[rec.Category].recipes.Add(rec);
+				}
 				link(rec);
 				FUtil.log("Added new recipe "+recipeToString(rec, true, true));
 			}
@@ -186,19 +190,21 @@ namespace ReikaKalseki.FortressCore
 		       	rr.Tier = orig.Tier;
 		        rr.CanCraftAnywhere = true;
 		        rr.Description = name;
-		        RecipeUtil.addIngredient(rr, orig.CraftedKey, (uint)orig.CraftedAmount);
+		        rr.addIngredient(orig.CraftedKey, (uint)orig.CraftedAmount);
 		        rr.ScanRequirements.AddRange(orig.ScanRequirements);
 		        foreach (string s in orig.ResearchRequirements)
-		        	RecipeUtil.addResearch(rr, s);
+		        	rr.addResearch(s);
 		        rr.ResearchCost = 0;
 			});
 		}
 		
-		public static CraftData copyRecipe(CraftData template) {
+		public static CraftData copyRecipe(CraftData template, string newKey) {
 			string xml = XMLParser.SerializeObject(template, typeof(CraftData));
 			CraftData ret = (CraftData)XMLParser.DeserializeObject(xml, typeof(CraftData));
 			ret.RecipeSet = template.RecipeSet;
 			ret.Category = template.Category;
+			ret.Key = newKey;
+			FUtil.log("Cloned recipe "+template.Key+" -> "+newKey+" via "+xml);
 			return ret;
 		}
 		

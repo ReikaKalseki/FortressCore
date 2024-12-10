@@ -143,9 +143,13 @@ namespace ReikaKalseki.FortressCore {
 		}
 
 		private void UpdateOutOfPower() {
-			if (this.currentPower >= this.powerPerSecond * LowFrequencyThread.mrPreviousUpdateTimeStep) {
+			if (this.currentPower >= getPPSCost() * LowFrequencyThread.mrPreviousUpdateTimeStep) {
 				this.SetNewOperatingState(OperatingState.Processing);
 			}
+		}
+		
+		protected virtual float getPPSCost() {
+			return powerPerSecond;
 		}
 
 		private void InitCounters() {
@@ -222,7 +226,7 @@ namespace ReikaKalseki.FortressCore {
 					//FUtil.log("Recipe valid");
 					this.mnPreviousRecipeIndex = num;
 					this.currentRecipe = recipes[num];
-					processTimer = currentRecipe.CraftTime;
+					processTimer = getCraftTime(currentRecipe);
 					this.SetNewOperatingState(OperatingState.Processing);
 					this.RemoveIngredients();
 					return;
@@ -252,6 +256,10 @@ namespace ReikaKalseki.FortressCore {
 					currentRecipe = null;
 				}
 			}*/
+		}
+		
+		protected virtual float getCraftTime(R recipe) {
+			return recipe.CraftTime;
 		}
 		
 		protected virtual bool isRecipeCurrentlyAccessible(R recipe) {
@@ -381,7 +389,7 @@ namespace ReikaKalseki.FortressCore {
 			if (!canProcess()) {
 				return;
 			}
-			this.currentPower -= this.powerPerSecond * LowFrequencyThread.mrPreviousUpdateTimeStep;
+			this.currentPower -= getPPSCost() * LowFrequencyThread.mrPreviousUpdateTimeStep;
 			if (this.currentPower < 0f) {
 				this.currentPower = 0f;
 				this.SetNewOperatingState(OperatingState.OutOfPower);
@@ -391,7 +399,7 @@ namespace ReikaKalseki.FortressCore {
 			if (this.processTimer <= 0f) {
 				clogged = false;
 				ItemStack toAdd = (ItemStack)ItemManager.SpawnItem(this.currentRecipe.CraftableItemType);
-				toAdd.mnAmount = currentRecipe.CraftedAmount;
+				toAdd.mnAmount = getYield(currentRecipe);
 				if (outputBuffer != null) {
 					if (!ItemManager.StackWholeItems(outputBuffer, toAdd, true)) {
 						clogged = true;
@@ -401,10 +409,19 @@ namespace ReikaKalseki.FortressCore {
 				else {
 					this.outputBuffer = toAdd;
 				}
+				onCraft(currentRecipe);
 				if (!this.AttemptToOffload()) {
 					this.SetNewOperatingState(OperatingState.OutOfStorage);
 				}
 			}
+		}
+		
+		protected virtual int getYield(R recipe) {
+			return recipe.CraftedAmount;
+		}
+		
+		protected virtual void onCraft(R recipe) {
+			
 		}
 		
 		protected virtual bool canProcess() {
@@ -634,7 +651,7 @@ namespace ReikaKalseki.FortressCore {
 		}
 
 		public override string GetUIText() {
-			string text = "Power: "+currentPower.ToString("N0")+"/"+mrMaxPower.ToString("N0")+" ("+this.powerPerSecond.ToString("N0") + " PPS)";
+			string text = "Power: "+currentPower.ToString("N0")+"/"+mrMaxPower.ToString("N0")+" ("+getPPSCost().ToString("N0") + " PPS)";
 			//text = text + "\nNeeds " + this.powerPerSecond.ToString() + " PPS";
 			/*
 			if (WorldScript.mbIsServer) {

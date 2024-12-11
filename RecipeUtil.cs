@@ -54,13 +54,19 @@ namespace ReikaKalseki.FortressCore
 		}
 		
 		private static CraftCost addIngredient(this CraftData rec, string item, uint amt, bool checkAdd) {
-			if (!ItemEntry.mEntriesByKey.ContainsKey(item)) {
+			int id;
+			ushort block;
+			ushort value;
+			if (!MaterialData.GetItemIdOrCubeValues(item, out id, out block, out value)) {
 				FUtil.log("Could not add item '"+item+"' to recipe "+rec.Key+" - it does not exist!");
 				return null;
 			}
 			CraftCost cost = new CraftCost();
 			cost.Amount = amt;
 			cost.Key = item;
+			cost.ItemType = id;
+			cost.CubeType = block;
+			cost.CubeValue = value;
 			rec.Costs.Add(cost);
 			FUtil.log("Added "+amt+" of "+item+" to recipe "+recipeToString(rec, true));
 			if (checkAdd && rec.Costs.Count > 5 && rec.RecipeSet == "Manufacturer")
@@ -90,12 +96,7 @@ namespace ReikaKalseki.FortressCore
 		}
     
 	    public static CraftCost addItemPerN(this CraftData rec, string add, float perN, uint amtPerN = 1) {
-			float num = rec.CraftedAmount*perN;
-			if (num-(int)num > 0.1)
-				throw new Exception("Recipe '"+rec.Key+"' does not make an integer amount ["+num+"] when multiplied by "+perN);
-	    	rec.CraftedAmount = (int)num;
-	    	rec.Costs.ForEach(cc => cc.Amount = (uint)(cc.Amount*perN));
-	    	rec.CraftTime *= perN;
+			rec.scaleIOExcept(perN);
 	    	return rec.addIngredient(add, amtPerN);
 	    }
 		

@@ -37,9 +37,9 @@ namespace ReikaKalseki.FortressCore {
 
 		public float currentPower { get; private set; }
 
-		public readonly float mrMaxPower;
+		public readonly float maxPower;
 
-		public readonly float mrMaxTransferRate;
+		public readonly float maxTransferRate;
 
 		public readonly float powerPerSecond;
 
@@ -72,19 +72,21 @@ namespace ReikaKalseki.FortressCore {
 		public float mrStateTimer { get; private set; }
 
 		public byte mnAttachedHoppers { get; private set; }
+
+		public float computedCraftSpeed { get; private set; }
 		
 		//protected R lockedRecipe;
 
-		protected FCoreMBCrafter(ModCreateSegmentEntityParameters parameters, MultiblockData mb, float pps, float maxPower, float maxIO, List<R> li) : base(parameters, mb) {
-			if (maxPower < pps)
-				throw new Exception("Machine "+mb.name+" stores too little power to operate!");
+		protected FCoreMBCrafter(ModCreateSegmentEntityParameters parameters, MultiblockData mb, float pps, float maxP, float maxIO, List<R> li) : base(parameters, mb) {
+			if (maxP < pps)
+				throw new Exception("Machine "+mb.name+" stores too little power ("+maxP+") to operate (PPS="+pps+")!");
 			if (maxIO < pps)
-				throw new Exception("Machine "+mb.name+" has too low power IO to operate continuously!");
+				throw new Exception("Machine "+mb.name+" has too low power IO ("+maxIO+") to operate continuously (PPS="+pps+")!");
 			
 			if (parameters.Value == mb.centerMeta || parameters.Value == mb.centerFlipMeta) {
 				powerPerSecond = pps;
-				mrMaxPower = maxPower;
-				mrMaxTransferRate = maxIO;
+				maxPower = maxP;
+				maxTransferRate = maxIO;
 				recipes = li;
 				
 				this.mRecipeCounters = new int[li.Count][];
@@ -94,16 +96,16 @@ namespace ReikaKalseki.FortressCore {
 			}
 			else {
 				powerPerSecond = 0;
-				mrMaxPower = 0;
-				mrMaxTransferRate = 0;
+				maxPower = 0;
+				maxTransferRate = 0;
 				recipes = new List<R>();
 			}
 		}
 
 		public override void LowFrequencyUpdate() {
 			base.LowFrequencyUpdate();
-			if (mrMaxPower <= 0 && mLinkedCenter == null) {
-				FloatingCombatTextManager.instance.QueueText(this.mnX, mnY, this.mnZ, 0.25F, "Ticking non-center without a linked center!", Color.red, 5f, 32f);
+			if (maxPower <= 0 && mLinkedCenter == null) {
+				FloatingCombatTextManager.instance.QueueText(this.mnX, mnY, this.mnZ, 0.25F, "Ticking non-center without a linked center (maxpower=0)!", Color.red, 5f, 32f);
 				return;
 			}
 			if (this.mbIsCenter && WorldScript.mbIsServer) {
@@ -389,13 +391,18 @@ namespace ReikaKalseki.FortressCore {
 			if (!canProcess()) {
 				return;
 			}
-			this.currentPower -= getPPSCost() * LowFrequencyThread.mrPreviousUpdateTimeStep;
+			
+			float dT = LowFrequencyThread.mrPreviousUpdateTimeStep;
+			computedCraftSpeed = getCraftingSpeed();
+			dT *= computedCraftSpeed;
+			
+			this.currentPower -= getPPSCost() * dT;
 			if (this.currentPower < 0f) {
 				this.currentPower = 0f;
 				this.SetNewOperatingState(OperatingState.OutOfPower);
 				return;
 			}
-			this.processTimer -= LowFrequencyThread.mrPreviousUpdateTimeStep;
+			this.processTimer -= dT;
 			if (this.processTimer <= 0f) {
 				clogged = false;
 				ItemStack toAdd = (ItemStack)ItemManager.SpawnItem(this.currentRecipe.CraftableItemType);
@@ -418,6 +425,10 @@ namespace ReikaKalseki.FortressCore {
 		
 		protected virtual int getYield(R recipe) {
 			return recipe.CraftedAmount;
+		}
+		
+		protected virtual float getCraftingSpeed() {
+			return 1;
 		}
 		
 		protected virtual void onCraft(R recipe) {
@@ -599,8 +610,8 @@ namespace ReikaKalseki.FortressCore {
 			if (this.currentPower < 0f) {
 				this.currentPower = 0f;
 			}
-			if (this.currentPower > this.mrMaxPower) {
-				this.currentPower = this.mrMaxPower;
+			if (this.currentPower > this.maxPower) {
+				this.currentPower = this.maxPower;
 			}
 			/*
 			string forced = reader.ReadString();
@@ -613,25 +624,25 @@ namespace ReikaKalseki.FortressCore {
 			if (this.mLinkedCenter != null) {
 				return this.mLinkedCenter.GetRemainingPowerCapacity();
 			}
-			return this.mrMaxPower - this.currentPower;
+			return this.maxPower - this.currentPower;
 		}
 
 		public float GetMaximumDeliveryRate() {
 			if (this.mLinkedCenter != null) {
 				return this.mLinkedCenter.GetMaximumDeliveryRate();
 			}
-			return this.mrMaxTransferRate;
+			return this.maxTransferRate;
 		}
 
 		public float GetMaxPower() {
 			if (this.mLinkedCenter != null) {
 				return this.mLinkedCenter.GetMaxPower();
 			}
-			return this.mrMaxPower;
+			return this.maxPower;
 		}
 
 		public bool DeliverPower(float amount) {
-			if (mrMaxPower <= 0 && mLinkedCenter == null) {
+			if (maxPower <= 0 && mLinkedCenter == null) {
 				FloatingCombatTextManager.instance.QueueText(this.mnX, mnY, this.mnZ, 0.25F, "Tried to deliver power to non-center without a linked center!", Color.red, 5f, 32f);
 				return false;
 			}
@@ -651,7 +662,7 @@ namespace ReikaKalseki.FortressCore {
 		}
 
 		public override string GetUIText() {
-			string text = "Power: "+currentPower.ToString("N0")+"/"+mrMaxPower.ToString("N0")+" ("+getPPSCost().ToString("N0") + " PPS)";
+			string text = "Power: "+currentPower.ToString("N0")+"/"+maxPower.ToString("N0")+" ("+getPPSCost().ToString("N0") + " PPS)";
 			//text = text + "\nNeeds " + this.powerPerSecond.ToString() + " PPS";
 			/*
 			if (WorldScript.mbIsServer) {

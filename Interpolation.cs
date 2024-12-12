@@ -45,20 +45,9 @@ namespace ReikaKalseki.FortressCore
 				return curvePoints[keys[idx]]; //keys[idx] == at
 			int prev = ~idx-1;
 			int next = prev+1;
-			bool flag = false;
-			if (!keys.Contains(prev)) {
-				FUtil.log("Error, looking up "+at+" in "+curvePoints+" found prev="+prev+" but that is not in the dict!");
-				flag = true;
-			}
-			if (!keys.Contains(next)) {
-				FUtil.log("Error, looking up "+at+" in "+curvePoints+" found next="+next+" but that is not in the dict!");
-				flag = true;
-			}
-			if (flag)
-				return 0;
 			float y1 = curvePoints[keys[prev]];
 			float y2 = curvePoints[keys[next]];
-			return Mathf.Lerp(y1, y2, (at-prev)/(float)(next-prev));
+			return Mathf.Lerp(y1, y2, (at-keys[prev])/(float)(keys[next]-keys[prev]));
 		}
 		
 		public void iterate(Action<KeyValuePair<float, float>> act) {

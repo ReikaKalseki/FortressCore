@@ -23,12 +23,20 @@ namespace ReikaKalseki.FortressCore
 	        	return Assembly.GetCallingAssembly();
 	        foreach (StackFrame f in sf) {
 	        	Assembly a = f.GetMethod().DeclaringType.Assembly;
-	        	if ((a != fCoreDLL || acceptFCore) && a != gameDLL && a.Location.Contains("Mods"))
+	        	if ((a != fCoreDLL || acceptFCore) && a != gameDLL && a.Location.Contains("254200"))
 	                return a;
 	        }
-	        log("Could not find valid mod assembly: "+string.Join("\n", sf.Select<StackFrame, string>(s => s.GetMethod()+" in "+s.GetMethod().DeclaringType).ToArray()), fCoreDLL);
+	        log("Could not find valid mod assembly in call stack:\n"+string.Join("\n", sf.Select(getMethodLocationInfo).ToArray()), fCoreDLL);
 	        return Assembly.GetCallingAssembly();
 		}
+	    
+	    public static string getMethodLocationInfo(StackFrame sf) {
+	    	return getMethodLocationInfo(sf.GetMethod())+" in file "+sf.GetFileName()+":"+sf.GetFileLineNumber();
+	    }
+	    
+	    public static string getMethodLocationInfo(MethodBase m) {
+	    	return m.Name+" in "+m.DeclaringType+" in DLL "+m.DeclaringType.Assembly.GetName()+" @ "+m.DeclaringType.Assembly.Location;
+	    }
 	    
 		public static void log(string s, Assembly a = null, int indent = 0) {
 			while (s.Length > 4096) {
